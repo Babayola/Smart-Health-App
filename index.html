@@ -1,13 +1,162 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Smart Health App</title>
-  <!-- Load Appwrite FIRST -->
-  <script src="https://cdn.jsdelivr.net/npm/appwrite@10.0.0"></script>
-  <!-- Then load Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    // LOAD APPWRITE FIRST WITH FALLBACK
+    function loadAppwrite() {
+      return new Promise((resolve) => {
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/appwrite@10.0.0/dist/iife/web.js';
+        script.onload = () => resolve(true);
+        script.onerror = () => {
+          console.error('Failed to load Appwrite from unpkg, trying jsdelivr');
+          const fallback = document.createElement('script');
+          fallback.src = 'https://cdn.jsdelivr.net/npm/appwrite@10.0.0';
+          fallback.onload = () => resolve(true);
+          document.head.appendChild(fallback);
+        };
+        document.head.appendChild(script);
+      });
+    }
+
+    // MAIN FUNCTION THAT RUNS AFTER APPWRITE LOADS
+    async function initApp() {
+      console.log("Appwrite loaded:", typeof Appwrite);
+      
+      try {
+        // Initialize Appwrite
+        const client = new Appwrite.Client();
+        client
+          .setEndpoint('https://cloud.appwrite.io/v1')
+          .setProject('6878fa84002aa49b26a1');
+        
+        const account = new Appwrite.Account(client);
+        const databases = new Appwrite.Databases(client);
+
+        // DOM Elements
+        const authContainer = document.getElementById('auth-container');
+        const dashboard = document.getElementById('dashboard');
+        const loginForm = document.getElementById('login-form');
+        const signupForm = document.getElementById('signup-form');
+        const healthForm = document.getElementById('health-form');
+
+        // Auth Functions
+        async function checkAuth() {
+          try {
+            const user = await account.get();
+            showDashboard(user);
+          } catch {
+            showAuth();
+          }
+        }
+
+        function showAuth() {
+          authContainer.style.display = 'block';
+          dashboard.style.display = 'none';
+        }
+
+        function showDashboard(user) {
+          authContainer.style.display = 'none';
+          dashboard.style.display = 'block';
+          console.log("User logged in:", user);
+        }
+
+        // Login
+        loginForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          try {
+            await account.createEmailSession(
+              document.getElementById('login-email').value,
+              document.getElementById('login-password').value
+            );
+            const user = await account.get();
+            showDashboard(user);
+          } catch (error) {
+            alert("Login failed: " + error.message);
+            console.error(error);
+          }
+        });
+
+        // Signup
+        signupForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          try {
+            await account.create(
+              'unique()',
+              document.getElementById('signup-email').value,
+              document.getElementById('signup-password').value,
+              document.getElementById('signup-name').value
+            );
+            alert("Account created! Please log in");
+            document.getElementById('login-email').value = document.getElementById('signup-email').value;
+            document.getElementById('signup-form').reset();
+            document.getElementById('show-login').click();
+          } catch (error) {
+            alert("Signup failed: " + error.message);
+            console.error(error);
+          }
+        });
+
+        // Health Data
+        healthForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          try {
+            const user = await account.get();
+            await databases.createDocument(
+              'health_db',
+              'health_records',
+              'unique()',
+              {
+                userId: user.$id,
+                heartRate: document.getElementById('heartRate').value,
+                bloodPressure: document.getElementById('bloodPressure').value,
+                bloodOxygen: document.getElementById('bloodOxygen').value,
+                timestamp: new Date().toISOString()
+              }
+            );
+            alert('Data saved successfully!');
+            healthForm.reset();
+          } catch (error) {
+            alert('Error: ' + error.message);
+            console.error(error);
+          }
+        });
+
+        // Form Toggles
+        document.getElementById('show-signup').addEventListener('click', (e) => {
+          e.preventDefault();
+          document.getElementById('login-form').style.display = 'none';
+          document.getElementById('signup-form').style.display = 'block';
+        });
+
+        document.getElementById('show-login').addEventListener('click', (e) => {
+          e.preventDefault();
+          document.getElementById('signup-form').style.display = 'none';
+          document.getElementById('login-form').style.display = 'block';
+        });
+
+        // Initialize
+        checkAuth();
+        
+      } catch (error) {
+        console.error("App initialization failed:", error);
+        document.body.innerHTML = `
+          <div style="padding: 20px; text-align: center;">
+            <h1>Critical Error</h1>
+            <p>${error.message}</p>
+            <button onclick="location.reload()">Reload App</button>
+          </div>
+        `;
+      }
+    }
+
+    // START THE APP
+    window.addEventListener('DOMContentLoaded', async () => {
+      await loadAppwrite();
+      initApp();
+    });
+  </script>
   <style>
     :root {
       --primary: #2e7d32;
@@ -41,7 +190,7 @@
       justify-content: space-between;
       align-items: center;
     }
-    input, select, button {
+    input, select {
       width: 100%;
       padding: 10px;
       margin: 8px 0;
@@ -53,6 +202,9 @@
       background-color: var(--primary);
       color: white;
       border: none;
+      padding: 12px 15px;
+      margin: 10px 0;
+      border-radius: 4px;
       cursor: pointer;
       font-weight: 600;
       transition: background-color 0.3s;
@@ -73,13 +225,12 @@
       border-radius: 8px;
       margin-top: 15px;
     }
-    /* Auth container */
     #auth-container {
       max-width: 400px;
       margin: 20px auto;
     }
     #dashboard {
-      display: none; /* Hidden until login */
+      display: none;
     }
   </style>
 </head>
@@ -118,7 +269,7 @@
     </div>
   </div>
 
-  <!-- Main Dashboard (hidden until auth) -->
+  <!-- Main Dashboard -->
   <div id="dashboard">
     <div class="dashboard">
       <!-- Health Metrics Input -->
@@ -178,117 +329,5 @@
       </div>
     </div>
   </div>
-
-  <!-- App Logic -->
-  <script>
-    // Initialize Appwrite
-    const client = new Appwrite.Client();
-    client
-      .setEndpoint('https://cloud.appwrite.io/v1')
-      .setProject('6878fa84002aa49b26a1');
-
-    const account = new Appwrite.Account(client);
-    const databases = new Appwrite.Databases(client);
-
-    // DOM Elements
-    const authContainer = document.getElementById('auth-container');
-    const dashboard = document.getElementById('dashboard');
-    const loginForm = document.getElementById('login-form-data');
-    const signupForm = document.getElementById('signup-form-data');
-    const healthForm = document.getElementById('health-form');
-
-    // Auth Functions
-    async function checkAuth() {
-      try {
-        const user = await account.get();
-        showDashboard(user);
-      } catch {
-        showAuth();
-      }
-    }
-
-    function showAuth() {
-      authContainer.style.display = 'block';
-      dashboard.style.display = 'none';
-    }
-
-    function showDashboard(user) {
-      authContainer.style.display = 'none';
-      dashboard.style.display = 'block';
-      console.log("User:", user);
-    }
-
-    // Login
-    loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      try {
-        await account.createEmailSession(
-          document.getElementById('login-email').value,
-          document.getElementById('login-password').value
-        );
-        const user = await account.get();
-        showDashboard(user);
-      } catch (error) {
-        alert("Login failed: " + error.message);
-      }
-    });
-
-    // Signup
-    signupForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      try {
-        await account.create(
-          'unique()',
-          document.getElementById('signup-email').value,
-          document.getElementById('signup-password').value,
-          document.getElementById('signup-name').value
-        );
-        alert("Account created! Please login");
-        document.getElementById('show-login').click();
-      } catch (error) {
-        alert("Signup failed: " + error.message);
-      }
-    });
-
-    // Form Toggles
-    document.getElementById('show-signup').addEventListener('click', (e) => {
-      e.preventDefault();
-      document.getElementById('login-form').style.display = 'none';
-      document.getElementById('signup-form').style.display = 'block';
-    });
-
-    document.getElementById('show-login').addEventListener('click', (e) => {
-      e.preventDefault();
-      document.getElementById('signup-form').style.display = 'none';
-      document.getElementById('login-form').style.display = 'block';
-    });
-
-    // Health Data
-    healthForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      try {
-        const user = await account.get();
-        await databases.createDocument(
-          'health_db',
-          'health_records',
-          'unique()',
-          {
-            userId: user.$id,
-            heartRate: document.getElementById('heartRate').value,
-            bloodPressure: document.getElementById('bloodPressure').value,
-            bloodOxygen: document.getElementById('bloodOxygen').value,
-            timestamp: new Date().toISOString()
-          }
-        );
-        alert('Data saved!');
-        healthForm.reset();
-      } catch (error) {
-        alert('Error: ' + error.message);
-      }
-    });
-
-    // Initialize
-    checkAuth();
-  </script>
 </body>
 </html>

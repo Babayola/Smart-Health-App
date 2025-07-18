@@ -1,318 +1,176 @@
-// ===== AUTHENTICATION SYSTEM =====
-const authContainer = document.getElementById('auth-container');
-const dashboard = document.getElementById('dashboard');
-const loginForm = document.getElementById('login-form');
-const signupForm = document.getElementById('signup-form');
+// ===== MAIN APPLICATION =====
+(() => {
+  // 1. INITIALIZE APPWRITE (ONLY DO THIS ONCE)
+  const client = new Appwrite.Client();
+  client
+    .setEndpoint('https://cloud.appwrite.io/v1')
+    .setProject('6878fa84002aa49b26a1');
 
-// Initialize Appwrite Auth
-const account = new Appwrite.Account(client);
+  const account = new Appwrite.Account(client);
+  const databases = new Appwrite.Databases(client);
 
-// Auth Functions
-async function checkAuth() {
-  try {
-    const user = await account.get();
-    showDashboard(user);
-  } catch {
-    showAuth();
-  }
-}
-
-function showAuth() {
-  authContainer.style.display = 'block';
-  dashboard.style.display = 'none';
-}
-
-function showDashboard(user) {
-  authContainer.style.display = 'none';
-  dashboard.style.display = 'block';
-  console.log("User logged in:", user);
-}
-
-// Event Listeners
-document.getElementById('login-btn').addEventListener('click', async () => {
-  const email = document.getElementById('login-email').value;
-  const password = document.getElementById('login-password').value;
-  
-  try {
-    await account.createEmailSession(email, password);
-    const user = await account.get();
-    showDashboard(user);
-  } catch (error) {
-    alert("Login failed: " + error.message);
-  }
-});
-
-document.getElementById('signup-btn').addEventListener('click', async () => {
-  const name = document.getElementById('signup-name').value;
-  const email = document.getElementById('signup-email').value;
-  const password = document.getElementById('signup-password').value;
-  
-  try {
-    await account.create('unique()', email, password, name);
-    await account.createEmailSession(email, password);
-    const user = await account.get();
-    showDashboard(user);
-  } catch (error) {
-    alert("Signup failed: " + error.message);
-  }
-});
-
-// Toggle Forms
-document.getElementById('show-signup').addEventListener('click', (e) => {
-  e.preventDefault();
-  loginForm.style.display = 'none';
-  signupForm.style.display = 'block';
-});
-
-document.getElementById('show-login').addEventListener('click', (e) => {
-  e.preventDefault();
-  signupForm.style.display = 'none';
-  loginForm.style.display = 'block';
-});
-
-// Initialize
-checkAuth();
-
-// Initialize Appwrite
-const client = new Appwrite.Client();
-client
-  .setEndpoint('https://cloud.appwrite.io/v1')
-  .setProject('6878fa84002aa49b26a1'); // Your project ID
-
-// DOM Elements
-const healthForm = document.getElementById('health-form');
-const analyzeBtn = document.getElementById('analyze-btn');
-const tipsBtn = document.getElementById('tips-btn');
-const metricSelect = document.getElementById('metric-select');
-const insightsContainer = document.getElementById('insights-container');
-const tipsContainer = document.getElementById('tips-container');
-
-// Health Data Structure
-let healthData = [];
-
-// Initialize Chart
-const ctx = document.getElementById('health-chart').getContext('2d');
-const healthChart = new Chart(ctx, {
-  type: 'line',
-  data: {
-    labels: [],
-    datasets: [{
-      label: 'Heart Rate',
-      data: [],
-      borderColor: '#2e7d32',
-      tension: 0.3,
-      fill: false
-    }]
-  },
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-      y: { beginAtZero: false }
-    }
-  }
-});
-
-// Save health data to Appwrite
-healthForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  
-  const formData = {
-    heartRate: document.getElementById('heartRate').value,
-    bloodPressure: document.getElementById('bloodPressure').value,
-    bloodOxygen: document.getElementById('bloodOxygen').value,
-    weight: document.getElementById('weight').value || null,
-    temperature: document.getElementById('temperature').value || null,
-    bloodSugar: document.getElementById('bloodSugar').value || null,
-    notes: document.getElementById('notes').value || '',
-    timestamp: new Date().toISOString()
+  // 2. DOM ELEMENTS
+  const elements = {
+    authContainer: document.getElementById('auth-container'),
+    dashboard: document.getElementById('dashboard'),
+    loginForm: document.getElementById('login-form'),
+    signupForm: document.getElementById('signup-form'),
+    loginEmail: document.getElementById('login-email'),
+    loginPassword: document.getElementById('login-password'),
+    signupName: document.getElementById('signup-name'),
+    signupEmail: document.getElementById('signup-email'),
+    signupPassword: document.getElementById('signup-password'),
+    showSignup: document.getElementById('show-signup'),
+    showLogin: document.getElementById('show-login'),
+    healthForm: document.getElementById('health-form'),
+    analyzeBtn: document.getElementById('analyze-btn'),
+    tipsBtn: document.getElementById('tips-btn')
   };
 
-  try {
-    const databases = new Appwrite.Databases(client);
-    await databases.createDocument(
-      'health_db',          // Database ID
-      'health_records',     // Collection ID
-      'unique()',           // Auto-generate document ID
-      formData
-    );
-    
-    alert('Health data saved successfully!');
-    healthForm.reset();
-    loadHealthData(); // Refresh data
-  } catch (error) {
-    console.error("Error saving data:", error);
-    alert('Failed to save data. See console for details.');
-  }
-});
+  // 3. STATE MANAGEMENT
+  let healthData = [];
 
-// Load and display health data
-async function loadHealthData() {
-  try {
-    const databases = new Appwrite.Databases(client);
-    const response = await databases.listDocuments(
-      'health_db', 
-      'health_records',
-      [],
-      20, // Limit to 20 records
-      undefined,
-      undefined,
-      undefined,
-      'timestamp' // Sort by timestamp
-    );
-    
-    healthData = response.documents;
-    updateChart();
-  } catch (error) {
-    console.error("Error loading data:", error);
-  }
-}
-
-// Update the chart with selected metric
-function updateChart() {
-  if (healthData.length === 0) return;
-  
-  const selectedMetric = metricSelect.value;
-  const labels = healthData.map(entry => 
-    new Date(entry.timestamp).toLocaleDateString()
-  );
-  
-  const data = healthData.map(entry => {
-    if (selectedMetric === 'bloodPressure') {
-      // Handle blood pressure (systolic/diastolic)
-      return entry.bloodPressure ? parseInt(entry.bloodPressure.split('/')[0]) : null;
+  // 4. AUTHENTICATION FUNCTIONS
+  async function checkAuth() {
+    try {
+      const user = await account.get();
+      showDashboard(user);
+    } catch {
+      showAuth();
     }
-    return entry[selectedMetric];
-  });
-  
-  healthChart.data.labels = labels;
-  healthChart.data.datasets[0].data = data;
-  healthChart.data.datasets[0].label = 
-    metricSelect.options[metricSelect.selectedIndex].text;
-  
-  healthChart.update();
-}
-
-// Metric selection change
-metricSelect.addEventListener('change', updateChart);
-
-// Generate health insights with Gemini API
-analyzeBtn.addEventListener('click', async () => {
-  if (healthData.length === 0) {
-    insightsContainer.innerHTML = '<p>No data to analyze. Please record some health metrics first.</p>';
-    return;
   }
-  
-  insightsContainer.innerHTML = '<p>Analyzing your health data... ⏳</p>';
-  
-  try {
-    // Prepare health summary for AI
-    const latestRecord = healthData[healthData.length - 1];
-    const healthSummary = `
-      Patient's latest health metrics:
-      - Heart Rate: ${latestRecord.heartRate} bpm
-      - Blood Pressure: ${latestRecord.bloodPressure} mmHg
-      - Blood Oxygen: ${latestRecord.bloodOxygen}%
-      ${latestRecord.weight ? `- Weight: ${latestRecord.weight} kg` : ''}
-      ${latestRecord.temperature ? `- Temperature: ${latestRecord.temperature}°C` : ''}
-      ${latestRecord.bloodSugar ? `- Blood Sugar: ${latestRecord.bloodSugar} mg/dL` : ''}
-      ${latestRecord.notes ? `- Notes: ${latestRecord.notes}` : ''}
-    `;
-    
-    const prompt = `As a medical AI assistant, analyze this patient data and provide 3-4 concise health insights with recommendations. Focus on potential risk factors and positive trends:\n\n${healthSummary}`;
-    
-    const insights = await getGeminiResponse(prompt);
-    insightsContainer.innerHTML = `<div>${formatResponse(insights)}</div>`;
-  } catch (error) {
-    console.error("Analysis error:", error);
-    insightsContainer.innerHTML = '<p>Failed to analyze data. Please try again.</p>';
+
+  function showAuth() {
+    if (elements.authContainer) elements.authContainer.style.display = 'block';
+    if (elements.dashboard) elements.dashboard.style.display = 'none';
   }
-});
 
-// Get personalized health tips
-tipsBtn.addEventListener('click', async () => {
-  tipsContainer.innerHTML = '<p>Generating personalized health tips... ⏳</p>';
-  
-  try {
-    // Prepare context for tips
-    const healthContext = healthData.length > 0 ? 
-      `Based on your recent health metrics (avg heart rate: ${calculateAverage('heartRate')} bpm, latest blood pressure: ${healthData[healthData.length - 1].bloodPressure} mmHg).` : 
-      "General health tips for maintaining wellness.";
-    
-    const prompt = `As a health coach, provide 5 personalized tips for improving cardiovascular health and overall wellness. ${healthContext} Make them actionable and specific.`;
-    
-    const tips = await getGeminiResponse(prompt);
-    tipsContainer.innerHTML = `<div>${formatResponse(tips)}</div>`;
-  } catch (error) {
-    console.error("Tips error:", error);
-    tipsContainer.innerHTML = '<p>Failed to generate tips. Please try again.</p>';
+  function showDashboard(user) {
+    if (elements.authContainer) elements.authContainer.style.display = 'none';
+    if (elements.dashboard) elements.dashboard.style.display = 'block';
+    loadHealthData();
   }
-});
 
-// Helper function to calculate average
-function calculateAverage(metric) {
-  const values = healthData
-    .map(entry => entry[metric])
-    .filter(val => val !== null && val !== undefined);
-  
-  if (values.length === 0) return 'N/A';
-  
-  const sum = values.reduce((acc, val) => acc + parseFloat(val), 0);
-  return (sum / values.length).toFixed(1);
-}
+  // 5. EVENT HANDLERS
+  function setupEventListeners() {
+    // Auth handlers
+    if (elements.loginForm) {
+      elements.loginForm.addEventListener('submit', handleLogin);
+    }
 
-// Gemini API integration
-async function getGeminiResponse(prompt) {
-  const API_KEY = "YOUR_GEMINI_API_KEY"; // Replace with your key
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${API_KEY}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ 
-      contents: [{ 
-        parts: [{ text: prompt }] 
-      }] 
-    })
-  });
-  
-  if (!response.ok) throw new Error(`API error: ${response.status}`);
-  
-  const data = await response.json();
-  return data.candidates[0].content.parts[0].text;
-}
+    if (elements.signupForm) {
+      elements.signupForm.addEventListener('submit', handleSignup);
+    }
 
-// Format AI responses with line breaks
-function formatResponse(text) {
-  return text.split('\n').map(paragraph => 
-    paragraph ? `<p>${paragraph}</p>` : ''
-  ).join('');
-}
+    // Form toggles
+    if (elements.showSignup) {
+      elements.showSignup.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (elements.loginForm) elements.loginForm.style.display = 'none';
+        if (elements.signupForm) elements.signupForm.style.display = 'block';
+      });
+    }
 
-// Initial data load
-loadHealthData();
+    if (elements.showLogin) {
+      elements.showLogin.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (elements.signupForm) elements.signupForm.style.display = 'none';
+        if (elements.loginForm) elements.loginForm.style.display = 'block';
+      });
+    }
 
-// Add to app.js
-const account = new Appwrite.Account(client);
+    // Health data handlers
+    if (elements.healthForm) {
+      elements.healthForm.addEventListener('submit', handleHealthSubmit);
+    }
 
-// Login function
-async function login(email, password) {
-  await account.createEmailSession(email, password);
-}
+    if (elements.analyzeBtn) {
+      elements.analyzeBtn.addEventListener('click', handleAnalyze);
+    }
 
-// Signup function
-async function signup(email, password, name) {
-  await account.create(email, password, name);
-  await login(email, password);
-}
+    if (elements.tipsBtn) {
+      elements.tipsBtn.addEventListener('click', handleGetTips);
+    }
+  }
 
-// Add at the VERY top of app.js
-if (typeof Appwrite === 'undefined') {
-  console.error("Appwrite SDK failed to load! Check network requests.");
-  alert("Critical error: Appwrite SDK not loaded. Please reload the page.");
-}
+  // 6. CORE FUNCTIONALITY
+  async function handleLogin(e) {
+    e.preventDefault();
+    try {
+      await account.createEmailSession(
+        elements.loginEmail.value,
+        elements.loginPassword.value
+      );
+      const user = await account.get();
+      showDashboard(user);
+    } catch (error) {
+      alert("Login failed: " + error.message);
+      console.error(error);
+    }
+  }
 
-// Wrap Appwrite initialization in a DOMContentLoaded event
-document.addEventListener("DOMContentLoaded", () => {
-  // Your existing app.js code here
-  const client = new Appwrite.Client();
-  // ... rest of your code
-});
+  async function handleSignup(e) {
+    e.preventDefault();
+    try {
+      await account.create(
+        'unique()',
+        elements.signupEmail.value,
+        elements.signupPassword.value,
+        elements.signupName.value
+      );
+      await handleLogin(e); // Auto-login after signup
+    } catch (error) {
+      alert("Signup failed: " + error.message);
+      console.error(error);
+    }
+  }
+
+  async function handleHealthSubmit(e) {
+    e.preventDefault();
+    try {
+      await databases.createDocument(
+        'health_db',
+        'health_records',
+        'unique()',
+        {
+          heartRate: document.getElementById('heartRate').value,
+          bloodPressure: document.getElementById('bloodPressure').value,
+          bloodOxygen: document.getElementById('bloodOxygen').value,
+          weight: document.getElementById('weight').value || null,
+          temperature: document.getElementById('temperature').value || null,
+          bloodSugar: document.getElementById('bloodSugar').value || null,
+          notes: document.getElementById('notes').value || '',
+          timestamp: new Date().toISOString()
+        }
+      );
+      alert('Data saved successfully!');
+      loadHealthData();
+    } catch (error) {
+      alert('Failed to save data');
+      console.error(error);
+    }
+  }
+
+  async function loadHealthData() {
+    try {
+      const response = await databases.listDocuments(
+        'health_db',
+        'health_records',
+        [],
+        20,
+        undefined,
+        undefined,
+        undefined,
+        'timestamp'
+      );
+      healthData = response.documents;
+      updateChart();
+    } catch (error) {
+      console.error("Error loading health data:", error);
+    }
+  }
+
+  // 7. INITIALIZATION
+  setupEventListeners();
+  checkAuth();
+})();

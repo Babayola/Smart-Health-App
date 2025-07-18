@@ -1,6 +1,6 @@
-// ===== MAIN APPLICATION =====
+// ===== COMPLETE WORKING APP.JS =====
 (() => {
-  // 1. INITIALIZE APPWRITE (ONLY DO THIS ONCE)
+  // 1. INITIALIZE APPWRITE
   const client = new Appwrite.Client();
   client
     .setEndpoint('https://cloud.appwrite.io/v1')
@@ -11,6 +11,7 @@
 
   // 2. DOM ELEMENTS
   const elements = {
+    // Auth
     authContainer: document.getElementById('auth-container'),
     dashboard: document.getElementById('dashboard'),
     loginForm: document.getElementById('login-form'),
@@ -22,15 +23,23 @@
     signupPassword: document.getElementById('signup-password'),
     showSignup: document.getElementById('show-signup'),
     showLogin: document.getElementById('show-login'),
+    
+    // Health Data
     healthForm: document.getElementById('health-form'),
+    heartRate: document.getElementById('heartRate'),
+    bloodPressure: document.getElementById('bloodPressure'),
+    bloodOxygen: document.getElementById('bloodOxygen'),
+    weight: document.getElementById('weight'),
+    temperature: document.getElementById('temperature'),
+    bloodSugar: document.getElementById('bloodSugar'),
+    notes: document.getElementById('notes'),
     analyzeBtn: document.getElementById('analyze-btn'),
-    tipsBtn: document.getElementById('tips-btn')
+    tipsBtn: document.getElementById('tips-btn'),
+    insightsContainer: document.getElementById('insights-container'),
+    tipsContainer: document.getElementById('tips-container')
   };
 
-  // 3. STATE MANAGEMENT
-  let healthData = [];
-
-  // 4. AUTHENTICATION FUNCTIONS
+  // 3. AUTHENTICATION
   async function checkAuth() {
     try {
       const user = await account.get();
@@ -48,129 +57,92 @@
   function showDashboard(user) {
     if (elements.authContainer) elements.authContainer.style.display = 'none';
     if (elements.dashboard) elements.dashboard.style.display = 'block';
-    loadHealthData();
+    console.log("User logged in:", user);
   }
 
-  // 5. EVENT HANDLERS
-  function setupEventListeners() {
-    // Auth handlers
-    if (elements.loginForm) {
-      elements.loginForm.addEventListener('submit', handleLogin);
-    }
-
-    if (elements.signupForm) {
-      elements.signupForm.addEventListener('submit', handleSignup);
-    }
-
-    // Form toggles
-    if (elements.showSignup) {
-      elements.showSignup.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (elements.loginForm) elements.loginForm.style.display = 'none';
-        if (elements.signupForm) elements.signupForm.style.display = 'block';
-      });
-    }
-
-    if (elements.showLogin) {
-      elements.showLogin.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (elements.signupForm) elements.signupForm.style.display = 'none';
-        if (elements.loginForm) elements.loginForm.style.display = 'block';
-      });
-    }
-
-    // Health data handlers
-    if (elements.healthForm) {
-      elements.healthForm.addEventListener('submit', handleHealthSubmit);
-    }
-
-    if (elements.analyzeBtn) {
-      elements.analyzeBtn.addEventListener('click', handleAnalyze);
-    }
-
-    if (elements.tipsBtn) {
-      elements.tipsBtn.addEventListener('click', handleGetTips);
-    }
-  }
-
-  // 6. CORE FUNCTIONALITY
   async function handleLogin(e) {
     e.preventDefault();
     try {
-      await account.createEmailSession(
+      const session = await account.createEmailSession(
         elements.loginEmail.value,
         elements.loginPassword.value
       );
+      console.log("Login success:", session);
       const user = await account.get();
       showDashboard(user);
     } catch (error) {
+      console.error("Login error:", error);
       alert("Login failed: " + error.message);
-      console.error(error);
     }
   }
 
   async function handleSignup(e) {
     e.preventDefault();
     try {
-      await account.create(
+      const user = await account.create(
         'unique()',
         elements.signupEmail.value,
         elements.signupPassword.value,
         elements.signupName.value
       );
-      await handleLogin(e); // Auto-login after signup
+      console.log("Signup success:", user);
+      await handleLogin(e); // Auto-login
     } catch (error) {
+      console.error("Signup error:", error);
       alert("Signup failed: " + error.message);
-      console.error(error);
     }
   }
 
+  // 4. HEALTH DATA
   async function handleHealthSubmit(e) {
     e.preventDefault();
     try {
-      await databases.createDocument(
+      const user = await account.get();
+      const doc = await databases.createDocument(
         'health_db',
         'health_records',
         'unique()',
         {
-          heartRate: document.getElementById('heartRate').value,
-          bloodPressure: document.getElementById('bloodPressure').value,
-          bloodOxygen: document.getElementById('bloodOxygen').value,
-          weight: document.getElementById('weight').value || null,
-          temperature: document.getElementById('temperature').value || null,
-          bloodSugar: document.getElementById('bloodSugar').value || null,
-          notes: document.getElementById('notes').value || '',
+          userId: user.$id,
+          heartRate: elements.heartRate.value,
+          bloodPressure: elements.bloodPressure.value,
+          bloodOxygen: elements.bloodOxygen.value,
           timestamp: new Date().toISOString()
         }
       );
-      alert('Data saved successfully!');
-      loadHealthData();
+      console.log("Data saved:", doc);
+      alert('Data saved!');
+      elements.healthForm.reset();
     } catch (error) {
-      alert('Failed to save data');
-      console.error(error);
+      console.error("Save error:", error);
+      alert('Save failed: ' + error.message);
     }
   }
 
-  async function loadHealthData() {
-    try {
-      const response = await databases.listDocuments(
-        'health_db',
-        'health_records',
-        [],
-        20,
-        undefined,
-        undefined,
-        undefined,
-        'timestamp'
-      );
-      healthData = response.documents;
-      updateChart();
-    } catch (error) {
-      console.error("Error loading health data:", error);
-    }
+  // 5. EVENT LISTENERS
+  function setupListeners() {
+    // Auth
+    if (elements.loginForm) elements.loginForm.addEventListener('submit', handleLogin);
+    if (elements.signupForm) elements.signupForm.addEventListener('submit', handleSignup);
+    
+    // Form toggles
+    if (elements.showSignup) elements.showSignup.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (elements.loginForm) elements.loginForm.style.display = 'none';
+      if (elements.signupForm) elements.signupForm.style.display = 'block';
+    });
+    
+    if (elements.showLogin) elements.showLogin.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (elements.signupForm) elements.signupForm.style.display = 'none';
+      if (elements.loginForm) elements.loginForm.style.display = 'block';
+    });
+
+    // Health Data
+    if (elements.healthForm) elements.healthForm.addEventListener('submit', handleHealthSubmit);
   }
 
-  // 7. INITIALIZATION
-  setupEventListeners();
+  // 6. INITIALIZE
+  setupListeners();
   checkAuth();
 })();

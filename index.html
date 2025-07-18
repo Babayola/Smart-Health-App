@@ -5,6 +5,7 @@
   <script src="https://cdn.jsdelivr.net/npm/appwrite@10.0.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="app.js" defer></script>
+  
   <style>
     :root {
       --primary: #2e7d32;
@@ -38,14 +39,38 @@
       justify-content: space-between;
       align-items: center;
     }
-    input, select {
-      width: 100%;
-      padding: 10px;
-      margin: 8px 0;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      box-sizing: border-box;
-    }
+    /* General input/select styles (keep your existing rules) */
+input, select, .auth-input {
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+/* Add these NEW rules below your existing ones */
+.auth-input {
+  /* Inherits all the above styles */
+  transition: border-color 0.3s;
+}
+
+.auth-input:focus {
+  border-color: var(--primary);
+  outline: none;
+}
+
+#auth-container {
+  max-width: 400px;
+  margin: 20px auto;
+  transition: all 0.3s ease;
+}
+
+/* Hide dashboard by default */
+#dashboard {
+  display: none;
+}
+
     button {
       background-color: var(--primary);
       color: white;
@@ -78,6 +103,30 @@
 <body>
   <h1>Smart Health Dashboard</h1>
   
+<div id="auth-container">
+  <div id="login-form">
+    <h2>Login</h2>
+    <input type="email" id="login-email" placeholder="Email">
+    <input type="password" id="login-password" placeholder="Password">
+    <button id="login-btn">Login</button>
+    <p>Don't have an account? <a href="#" id="show-signup">Sign Up</a></p>
+  </div>
+  
+  <div id="signup-form" style="display:none;">
+    <h2>Create Account</h2>
+    <input type="text" id="signup-name" placeholder="Full Name">
+    <input type="email" id="signup-email" placeholder="Email">
+    <input type="password" id="signup-password" placeholder="Password">
+    <button id="signup-btn">Sign Up</button>
+    <p>Already have an account? <a href="#" id="show-login">Login</a></p>
+  </div>
+</div>
+
+<!-- Hide dashboard until logged in -->
+<div id="dashboard" style="display:none;">
+  <!-- Your existing dashboard here -->
+</div>
+
   <div class="dashboard">
     <!-- Health Metrics Input -->
     <div class="card health-metrics">
@@ -164,3 +213,4 @@
   </div>
 </body>
 </html>
+

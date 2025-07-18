@@ -1,3 +1,78 @@
+// ===== AUTHENTICATION SYSTEM =====
+const authContainer = document.getElementById('auth-container');
+const dashboard = document.getElementById('dashboard');
+const loginForm = document.getElementById('login-form');
+const signupForm = document.getElementById('signup-form');
+
+// Initialize Appwrite Auth
+const account = new Appwrite.Account(client);
+
+// Auth Functions
+async function checkAuth() {
+  try {
+    const user = await account.get();
+    showDashboard(user);
+  } catch {
+    showAuth();
+  }
+}
+
+function showAuth() {
+  authContainer.style.display = 'block';
+  dashboard.style.display = 'none';
+}
+
+function showDashboard(user) {
+  authContainer.style.display = 'none';
+  dashboard.style.display = 'block';
+  console.log("User logged in:", user);
+}
+
+// Event Listeners
+document.getElementById('login-btn').addEventListener('click', async () => {
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+  
+  try {
+    await account.createEmailSession(email, password);
+    const user = await account.get();
+    showDashboard(user);
+  } catch (error) {
+    alert("Login failed: " + error.message);
+  }
+});
+
+document.getElementById('signup-btn').addEventListener('click', async () => {
+  const name = document.getElementById('signup-name').value;
+  const email = document.getElementById('signup-email').value;
+  const password = document.getElementById('signup-password').value;
+  
+  try {
+    await account.create('unique()', email, password, name);
+    await account.createEmailSession(email, password);
+    const user = await account.get();
+    showDashboard(user);
+  } catch (error) {
+    alert("Signup failed: " + error.message);
+  }
+});
+
+// Toggle Forms
+document.getElementById('show-signup').addEventListener('click', (e) => {
+  e.preventDefault();
+  loginForm.style.display = 'none';
+  signupForm.style.display = 'block';
+});
+
+document.getElementById('show-login').addEventListener('click', (e) => {
+  e.preventDefault();
+  signupForm.style.display = 'none';
+  loginForm.style.display = 'block';
+});
+
+// Initialize
+checkAuth();
+
 // Initialize Appwrite
 const client = new Appwrite.Client();
 client
@@ -228,3 +303,16 @@ async function signup(email, password, name) {
   await account.create(email, password, name);
   await login(email, password);
 }
+
+// Add at the VERY top of app.js
+if (typeof Appwrite === 'undefined') {
+  console.error("Appwrite SDK failed to load! Check network requests.");
+  alert("Critical error: Appwrite SDK not loaded. Please reload the page.");
+}
+
+// Wrap Appwrite initialization in a DOMContentLoaded event
+document.addEventListener("DOMContentLoaded", () => {
+  // Your existing app.js code here
+  const client = new Appwrite.Client();
+  // ... rest of your code
+});

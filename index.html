@@ -1,11 +1,13 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Smart Health App</title>
+  <!-- Load Appwrite FIRST -->
   <script src="https://cdn.jsdelivr.net/npm/appwrite@10.0.0"></script>
+  <!-- Then load Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="app.js" defer></script>
-  
   <style>
     :root {
       --primary: #2e7d32;
@@ -39,45 +41,18 @@
       justify-content: space-between;
       align-items: center;
     }
-    /* General input/select styles (keep your existing rules) */
-input, select, .auth-input {
-  width: 100%;
-  padding: 10px;
-  margin: 8px 0;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  box-sizing: border-box;
-}
-
-/* Add these NEW rules below your existing ones */
-.auth-input {
-  /* Inherits all the above styles */
-  transition: border-color 0.3s;
-}
-
-.auth-input:focus {
-  border-color: var(--primary);
-  outline: none;
-}
-
-#auth-container {
-  max-width: 400px;
-  margin: 20px auto;
-  transition: all 0.3s ease;
-}
-
-/* Hide dashboard by default */
-#dashboard {
-  display: none;
-}
-
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
     button {
       background-color: var(--primary);
       color: white;
       border: none;
-      padding: 12px 15px;
-      margin: 10px 0;
-      border-radius: 4px;
       cursor: pointer;
       font-weight: 600;
       transition: background-color 0.3s;
@@ -98,119 +73,222 @@ input, select, .auth-input {
       border-radius: 8px;
       margin-top: 15px;
     }
+    /* Auth container */
+    #auth-container {
+      max-width: 400px;
+      margin: 20px auto;
+    }
+    #dashboard {
+      display: none; /* Hidden until login */
+    }
   </style>
 </head>
 <body>
   <h1>Smart Health Dashboard</h1>
-  
-<div id="auth-container">
-  <div id="login-form">
-    <h2>Login</h2>
-    <input type="email" id="login-email" placeholder="Email">
-    <input type="password" id="login-password" placeholder="Password">
-    <button id="login-btn">Login</button>
-    <p>Don't have an account? <a href="#" id="show-signup">Sign Up</a></p>
-  </div>
-  
-  <div id="signup-form" style="display:none;">
-    <h2>Create Account</h2>
-    <input type="text" id="signup-name" placeholder="Full Name">
-    <input type="email" id="signup-email" placeholder="Email">
-    <input type="password" id="signup-password" placeholder="Password">
-    <button id="signup-btn">Sign Up</button>
-    <p>Already have an account? <a href="#" id="show-login">Login</a></p>
-  </div>
-</div>
 
-<!-- Hide dashboard until logged in -->
-<div id="dashboard" style="display:none;">
-  <!-- Your existing dashboard here -->
-</div>
+  <!-- Auth Section -->
+  <div id="auth-container">
+    <div id="login-form">
+      <div class="card">
+        <div class="card-header">Login</div>
+        <form id="login-form-data">
+          <input type="email" id="login-email" placeholder="Email" required>
+          <input type="password" id="login-password" placeholder="Password" required>
+          <button type="submit">Login</button>
+          <p style="text-align: center; margin-top: 15px;">
+            Don't have an account? <a href="#" id="show-signup">Sign Up</a>
+          </p>
+        </form>
+      </div>
+    </div>
 
-  <div class="dashboard">
-    <!-- Health Metrics Input -->
-    <div class="card health-metrics">
-      <div class="card-header">
-        <span>Record Health Metrics</span>
-      </div>
-      <form id="health-form">
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
-          <div>
-            <label>Heart Rate (bpm)</label>
-            <input type="number" id="heartRate" min="40" max="200" required>
-          </div>
-          <div>
-            <label>Blood Pressure (mmHg)</label>
-            <input type="text" id="bloodPressure" placeholder="120/80" required>
-          </div>
-          <div>
-            <label>Blood Oxygen (%)</label>
-            <input type="number" id="bloodOxygen" min="80" max="100" required>
-          </div>
-        </div>
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 15px;">
-          <div>
-            <label>Weight (kg)</label>
-            <input type="number" id="weight" step="0.1" min="30" max="200">
-          </div>
-          <div>
-            <label>Temperature (°C)</label>
-            <input type="number" id="temperature" step="0.1" min="35" max="42">
-          </div>
-          <div>
-            <label>Blood Sugar (mg/dL)</label>
-            <input type="number" id="bloodSugar" min="50" max="400">
-          </div>
-        </div>
-        
-        <div style="margin-top: 15px;">
-          <label>Notes</label>
-          <input type="text" id="notes" placeholder="How are you feeling?">
-        </div>
-        
-        <button type="submit">Save Health Data</button>
-      </form>
-    </div>
-    
-    <!-- Health Insights -->
-    <div class="card">
-      <div class="card-header">
-        <span>Health Insights</span>
-        <button id="analyze-btn">Analyze Data</button>
-      </div>
-      <div id="insights-container" class="tips-container">
-        <p>Click "Analyze Data" to get AI-powered health insights based on your metrics.</p>
-      </div>
-    </div>
-    
-    <!-- Health History -->
-    <div class="card">
-      <div class="card-header">
-        <span>Recent Records</span>
-        <select id="metric-select">
-          <option value="heartRate">Heart Rate</option>
-          <option value="bloodPressure">Blood Pressure</option>
-          <option value="bloodOxygen">Blood Oxygen</option>
-          <option value="weight">Weight</option>
-        </select>
-      </div>
-      <div class="chart-container">
-        <canvas id="health-chart"></canvas>
-      </div>
-    </div>
-    
-    <!-- Health Tips -->
-    <div class="card">
-      <div class="card-header">
-        <span>Personalized Health Tips</span>
-        <button id="tips-btn">Get New Tips</button>
-      </div>
-      <div id="tips-container" class="tips-container">
-        <p>Click "Get New Tips" for personalized health recommendations.</p>
+    <div id="signup-form" style="display: none;">
+      <div class="card">
+        <div class="card-header">Create Account</div>
+        <form id="signup-form-data">
+          <input type="text" id="signup-name" placeholder="Full Name" required>
+          <input type="email" id="signup-email" placeholder="Email" required>
+          <input type="password" id="signup-password" placeholder="Password" required>
+          <button type="submit">Sign Up</button>
+          <p style="text-align: center; margin-top: 15px;">
+            Already have an account? <a href="#" id="show-login">Login</a>
+          </p>
+        </form>
       </div>
     </div>
   </div>
+
+  <!-- Main Dashboard (hidden until auth) -->
+  <div id="dashboard">
+    <div class="dashboard">
+      <!-- Health Metrics Input -->
+      <div class="card health-metrics">
+        <div class="card-header">
+          <span>Record Health Metrics</span>
+        </div>
+        <form id="health-form">
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+            <div>
+              <label>Heart Rate (bpm)</label>
+              <input type="number" id="heartRate" min="40" max="200" required>
+            </div>
+            <div>
+              <label>Blood Pressure (mmHg)</label>
+              <input type="text" id="bloodPressure" placeholder="120/80" required>
+            </div>
+            <div>
+              <label>Blood Oxygen (%)</label>
+              <input type="number" id="bloodOxygen" min="80" max="100" required>
+            </div>
+          </div>
+          <button type="submit">Save Health Data</button>
+        </form>
+      </div>
+
+      <!-- Health Insights -->
+      <div class="card">
+        <div class="card-header">
+          <span>Health Insights</span>
+          <button id="analyze-btn">Analyze Data</button>
+        </div>
+        <div id="insights-container" class="tips-container">
+          <p>Login and submit data to get insights</p>
+        </div>
+      </div>
+
+      <!-- Health History -->
+      <div class="card">
+        <div class="card-header">
+          <span>Recent Records</span>
+        </div>
+        <div class="chart-container">
+          <canvas id="health-chart"></canvas>
+        </div>
+      </div>
+
+      <!-- Health Tips -->
+      <div class="card">
+        <div class="card-header">
+          <span>Health Tips</span>
+          <button id="tips-btn">Get Tips</button>
+        </div>
+        <div id="tips-container" class="tips-container">
+          <p>Login to get personalized health tips</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- App Logic -->
+  <script>
+    // Initialize Appwrite
+    const client = new Appwrite.Client();
+    client
+      .setEndpoint('https://cloud.appwrite.io/v1')
+      .setProject('6878fa84002aa49b26a1');
+
+    const account = new Appwrite.Account(client);
+    const databases = new Appwrite.Databases(client);
+
+    // DOM Elements
+    const authContainer = document.getElementById('auth-container');
+    const dashboard = document.getElementById('dashboard');
+    const loginForm = document.getElementById('login-form-data');
+    const signupForm = document.getElementById('signup-form-data');
+    const healthForm = document.getElementById('health-form');
+
+    // Auth Functions
+    async function checkAuth() {
+      try {
+        const user = await account.get();
+        showDashboard(user);
+      } catch {
+        showAuth();
+      }
+    }
+
+    function showAuth() {
+      authContainer.style.display = 'block';
+      dashboard.style.display = 'none';
+    }
+
+    function showDashboard(user) {
+      authContainer.style.display = 'none';
+      dashboard.style.display = 'block';
+      console.log("User:", user);
+    }
+
+    // Login
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await account.createEmailSession(
+          document.getElementById('login-email').value,
+          document.getElementById('login-password').value
+        );
+        const user = await account.get();
+        showDashboard(user);
+      } catch (error) {
+        alert("Login failed: " + error.message);
+      }
+    });
+
+    // Signup
+    signupForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await account.create(
+          'unique()',
+          document.getElementById('signup-email').value,
+          document.getElementById('signup-password').value,
+          document.getElementById('signup-name').value
+        );
+        alert("Account created! Please login");
+        document.getElementById('show-login').click();
+      } catch (error) {
+        alert("Signup failed: " + error.message);
+      }
+    });
+
+    // Form Toggles
+    document.getElementById('show-signup').addEventListener('click', (e) => {
+      e.preventDefault();
+      document.getElementById('login-form').style.display = 'none';
+      document.getElementById('signup-form').style.display = 'block';
+    });
+
+    document.getElementById('show-login').addEventListener('click', (e) => {
+      e.preventDefault();
+      document.getElementById('signup-form').style.display = 'none';
+      document.getElementById('login-form').style.display = 'block';
+    });
+
+    // Health Data
+    healthForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const user = await account.get();
+        await databases.createDocument(
+          'health_db',
+          'health_records',
+          'unique()',
+          {
+            userId: user.$id,
+            heartRate: document.getElementById('heartRate').value,
+            bloodPressure: document.getElementById('bloodPressure').value,
+            bloodOxygen: document.getElementById('bloodOxygen').value,
+            timestamp: new Date().toISOString()
+          }
+        );
+        alert('Data saved!');
+        healthForm.reset();
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    });
+
+    // Initialize
+    checkAuth();
+  </script>
 </body>
 </html>
-

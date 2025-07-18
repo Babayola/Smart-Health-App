@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Health App</title>
+  <script src="https://cdn.jsdelivr.net/npm/appwrite@10.0.0"></script>
+  <script src="app.js" defer></script>
+  <style>
+    body { font-family: Arial; max-width: 600px; margin: 0 auto; padding: 20px; }
+    button, input { padding: 8px; margin: 5px 0; }
+  </style>
+</head>
+<body>
+  <h1>Health Data Tracker</h1>
+  
+  <!-- Input Form -->
+  <div>
+    <input type="number" id="heartRate" placeholder="Heart Rate (bpm)">
+    <input type="number" id="bloodPressure" placeholder="Blood Pressure (mmHg)">
+    <button id="save-btn">Save Data</button>
+  </div>
+
+  <!-- Data Display -->
+  <div id="data-container"></div>
+</body>
+</html>

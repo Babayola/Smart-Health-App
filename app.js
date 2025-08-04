@@ -1,7 +1,7 @@
-// ===== UPDATED APP.JS CONTENT (Sophisticated Analysis & Personalized Tips) =====
+// ===== UPDATED APP.JS CONTENT (Adding Weight Metric) =====
 // This file should be named app.js and linked from index.html: <script src="app.js"></script>
 
-console.log("App.js version: 2025-08-05_16:00 - Analysis & Tips Enhanced"); // Updated for confirmation
+console.log("App.js version: 2025-08-05_16:00 - Adding Weight Metric"); // Updated for confirmation
 
 (() => {
   // 1. INITIALIZE APPWRITE
@@ -40,8 +40,7 @@ console.log("App.js version: 2025-08-05_16:00 - Analysis & Tips Enhanced"); // U
     heartRate: document.getElementById('heartRate'),
     bloodPressure: document.getElementById('bloodPressure'),
     bloodOxygen: document.getElementById('bloodOxygen'),
-    analyzeBtn: document.getElementById('analyze-btn'), 
-    tipsBtn: document.getElementById('tips-btn'),       
+    weight: document.getElementById('weight'), // Added new weight element
     insightsContainer: document.getElementById('insights-container'),
     tipsContainer: document.getElementById('tips-container'),
     heartRateChartCanvas: document.getElementById('health-chart')
@@ -169,6 +168,7 @@ console.log("App.js version: 2025-08-05_16:00 - Analysis & Tips Enhanced"); // U
           heartRate: parseInt(elements.heartRate.value),
           bloodPressure: elements.bloodPressure.value,
           bloodOxygen: parseInt(elements.bloodOxygen.value),
+          weight: parseInt(elements.weight.value), // Added new weight value
           timestamp: new Date().toISOString() 
         },
         [ 
@@ -180,6 +180,7 @@ console.log("App.js version: 2025-08-05_16:00 - Analysis & Tips Enhanced"); // U
       alert('Health data saved successfully!');
       elements.healthForm.reset();
       handleAnalyzeData(); 
+      handleGetTips(); 
     } catch (error) {
       console.error("Save data error:", error);
       console.log('Full Appwrite error object:', error); 
@@ -203,6 +204,7 @@ console.log("App.js version: 2025-08-05_16:00 - Analysis & Tips Enhanced"); // U
     });
     const heartRateData = sortedRecords.map(record => record.heartRate);
     const bloodOxygenData = sortedRecords.map(record => record.bloodOxygen);
+    const weightData = sortedRecords.map(record => record.weight); // Added new weight data
 
     // Destroy existing chart instance if it exists
     if (heartRateChartInstance) heartRateChartInstance.destroy();
@@ -226,6 +228,14 @@ console.log("App.js version: 2025-08-05_16:00 - Analysis & Tips Enhanced"); // U
             data: bloodOxygenData,
             borderColor: '#36A2EB',
             backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            tension: 0.1,
+            fill: false
+          },
+          {
+            label: 'Weight (kg)', // Added new weight dataset
+            data: weightData,
+            borderColor: '#9966FF',
+            backgroundColor: 'rgba(153, 102, 255, 0.2)',
             tension: 0.1,
             fill: false
           }
@@ -286,6 +296,10 @@ console.log("App.js version: 2025-08-05_16:00 - Analysis & Tips Enhanced"); // U
       let minBloodOxygen = 100; // Initialize high
       let maxBloodOxygen = 80;  // Initialize low
 
+      let totalWeight = 0; // Added new weight variables
+      let minWeight = 500;
+      let maxWeight = 0;
+
       let latestBloodPressure = 'N/A'; 
 
       records.forEach((record, index) => {
@@ -299,6 +313,13 @@ console.log("App.js version: 2025-08-05_16:00 - Analysis & Tips Enhanced"); // U
         minBloodOxygen = Math.min(minBloodOxygen, record.bloodOxygen);
         maxBloodOxygen = Math.max(maxBloodOxygen, record.bloodOxygen);
 
+        // Weight
+        if (record.weight) { // Check if the record has weight data
+            totalWeight += record.weight;
+            minWeight = Math.min(minWeight, record.weight);
+            maxWeight = Math.max(maxWeight, record.weight);
+        }
+
         if (index === 0) { 
           latestBloodPressure = record.bloodPressure;
         }
@@ -306,6 +327,7 @@ console.log("App.js version: 2025-08-05_16:00 - Analysis & Tips Enhanced"); // U
 
       const avgHeartRate = (totalHeartRate / records.length).toFixed(0);
       const avgBloodOxygen = (totalBloodOxygen / records.length).toFixed(0);
+      const avgWeight = totalWeight > 0 ? (totalWeight / records.filter(r => r.weight).length).toFixed(0) : 'N/A'; // Added new average weight
 
       let insightsHtml = `
         <h3>Your Health Insights (${records.length} records analyzed):</h3>
@@ -313,6 +335,7 @@ console.log("App.js version: 2025-08-05_16:00 - Analysis & Tips Enhanced"); // U
           <li><strong>Heart Rate (bpm):</strong> Avg ${avgHeartRate}, Min ${minHeartRate}, Max ${maxHeartRate}</li>
           <li><strong>Blood Pressure:</strong> Latest ${latestBloodPressure} mmHg</li>
           <li><strong>Blood Oxygen (%):</strong> Avg ${avgBloodOxygen}, Min ${minBloodOxygen}, Max ${maxBloodOxygen}</li>
+          <li><strong>Weight (kg):</strong> Avg ${avgWeight}, Min ${minWeight}, Max ${maxWeight}</li>
         </ul>
       `;
       
@@ -362,6 +385,7 @@ console.log("App.js version: 2025-08-05_16:00 - Analysis & Tips Enhanced"); // U
             const latestHR = records[0].heartRate;
             const latestBO = records[0].bloodOxygen;
             const latestBP = records[0].bloodPressure; // e.g., "120/80"
+            const latestWeight = records[0].weight; // Get latest weight
             const [systolic, diastolic] = latestBP.split('/').map(Number);
 
             // Personalized Tips based on thresholds
@@ -380,6 +404,11 @@ console.log("App.js version: 2025-08-05_16:00 - Analysis & Tips Enhanced"); // U
                 personalizedTips.push("Your recent blood pressure readings suggest you might be approaching or in the high range. Focus on a low-sodium diet and regular exercise.");
             } else if (systolic < 90 || diastolic < 60) { // Low blood pressure
                 personalizedTips.push("Your blood pressure appears low. Ensure you're well-hydrated and discuss with a doctor if you experience dizziness.");
+            }
+            
+            // New personalized tip for weight
+            if (latestWeight > 90) { // Example threshold, you can change this
+                personalizedTips.push("Your recent weight reading is high. Focusing on a balanced diet and increasing physical activity can help.");
             }
         }
     } catch (error) {
@@ -437,8 +466,6 @@ console.log("App.js version: 2025-08-05_16:00 - Analysis & Tips Enhanced"); // U
 
     // Health Data
     if (elements.healthForm) elements.healthForm.addEventListener('submit', handleHealthSubmit);
-    if (elements.analyzeBtn) elements.analyzeBtn.addEventListener('click', handleAnalyzeData); 
-    if (elements.tipsBtn) elements.tipsBtn.addEventListener('click', handleGetTips);       
   }
 
   // 6. INITIALIZE APP

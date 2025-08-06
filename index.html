@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Health App</title>
     <style>
-        /* Your existing CSS content */
         :root {
             --primary: #2e7d32;
             --secondary: #388e3c;
@@ -88,7 +87,6 @@
         <h1>Smart Health Dashboard</h1>
         <button id="logout-btn" style="display: none;">Logout</button>
     </header>
-
     <div id="auth-container">
         <div id="login-form">
             <div class="card">
@@ -103,7 +101,6 @@
                 </form>
             </div>
         </div>
-
         <div id="signup-form" style="display: none;">
             <div class="card">
                 <div class="card-header">Create Account</div>
@@ -119,7 +116,6 @@
             </div>
         </div>
     </div>
-
     <div id="dashboard">
         <div class="dashboard">
             <div class="card health-metrics">
@@ -148,7 +144,6 @@
                     <button type="submit">Save Health Data</button>
                 </form>
             </div>
-
             <div class="card">
                 <div class="card-header">
                     <span>Health Insights</span>
@@ -157,7 +152,6 @@
                     <p>Login and submit data to get insights</p>
                 </div>
             </div>
-
             <div class="card">
                 <div class="card-header">
                     <span>Recent Records</span>
@@ -166,7 +160,6 @@
                     <canvas id="health-chart"></canvas>
                 </div>
             </div>
-
             <div class="card">
                 <div class="card-header">
                     <span>Health Tips</span>
@@ -178,8 +171,7 @@
             </div>
         </div>
     </div>
-
-    <script src="https://unpkg.com/appwrite@13.0.0/dist/appwrite.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="app.js"></script>
 </body>

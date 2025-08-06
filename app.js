@@ -1,7 +1,7 @@
 // ===== FINAL, CORRECTED APP.JS FILE =====
 // This file should be named app.js and linked from index.html: <script src="app.js"></script>
 
-console.log("App.js version: 2025-08-05_17:00 - Final Fix"); 
+console.log("App.js version: 2025-08-05_17:00 - Final Fix");
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
     insightsContainer: document.getElementById('insights-container'),
     tipsContainer: document.getElementById('tips-container'),
     heartRateChartCanvas: document.getElementById('health-chart'),
-    tipsBtn: document.getElementById('tips-btn') // Corrected to match your HTML
+    tipsBtn: document.getElementById('tips-btn') 
   };
 
   for (const key in elements) {
@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log("checkAuth: User found:", user); 
       showDashboard(user);
       handleAnalyzeData(); 
-      if (elements.logoutBtn) elements.logoutBtn.style.display = 'inline-block'; // Changed display to inline-block
+      if (elements.logoutBtn) elements.logoutBtn.style.display = 'inline-block'; 
     } catch (error) { 
       console.log("checkAuth: User not authenticated or session invalid. Error:", error); 
       showAuth();
@@ -192,7 +192,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
-    // Reverse records to display oldest to newest on chart
     const sortedRecords = records.slice().reverse(); 
 
     const labels = sortedRecords.map(record => {
@@ -447,7 +446,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Health Data
     if (elements.healthForm) elements.healthForm.addEventListener('submit', handleHealthSubmit);
-    if (elements.tipsBtn) elements.tipsBtn.addEventListener('click', handleGetTips); // Corrected to match your HTML
+    if (elements.tipsBtn) elements.tipsBtn.addEventListener('click', handleGetTips);
   }
 
   // 6. INITIALIZE APP

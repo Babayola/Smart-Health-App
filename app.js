@@ -1,10 +1,9 @@
-// ===== FINAL, CORRECTED APP.JS FILE =====
+// ===== UPDATED APP.JS CONTENT (Adding Weight Metric) =====
 // This file should be named app.js and linked from index.html: <script src="app.js"></script>
 
-console.log("App.js version: 2025-08-05_17:00 - Final Fix");
+console.log("App.js version: 2025-08-05_16:00 - Adding Weight Metric"); // Updated for confirmation
 
-document.addEventListener('DOMContentLoaded', () => {
-
+(() => {
   // 1. INITIALIZE APPWRITE
   const client = new Appwrite.Client();
   client
@@ -41,15 +40,14 @@ document.addEventListener('DOMContentLoaded', () => {
     heartRate: document.getElementById('heartRate'),
     bloodPressure: document.getElementById('bloodPressure'),
     bloodOxygen: document.getElementById('bloodOxygen'),
-    weight: document.getElementById('weight'), 
+    weight: document.getElementById('weight'), // Added new weight element
     insightsContainer: document.getElementById('insights-container'),
     tipsContainer: document.getElementById('tips-container'),
-    heartRateChartCanvas: document.getElementById('health-chart'),
-    tipsBtn: document.getElementById('tips-btn') 
+    heartRateChartCanvas: document.getElementById('health-chart')
   };
 
   for (const key in elements) {
-    if (!elements[key] && key !== 'bloodOxygenChartCanvas') { 
+    if (!elements[key] && key !== 'bloodOxygenChartCanvas') { // bloodOxygenChartCanvas is not directly in HTML
       console.error(`CRITICAL ERROR: DOM element '${key}' not found! Check your HTML IDs.`);
     }
   }
@@ -62,7 +60,8 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log("checkAuth: User found:", user); 
       showDashboard(user);
       handleAnalyzeData(); 
-      if (elements.logoutBtn) elements.logoutBtn.style.display = 'inline-block'; 
+      handleGetTips();
+      if (elements.logoutBtn) elements.logoutBtn.style.display = 'block'; 
     } catch (error) { 
       console.log("checkAuth: User not authenticated or session invalid. Error:", error); 
       showAuth();
@@ -85,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("showDashboard called. User:", user);
     if (elements.authContainer) elements.authContainer.style.display = 'none';
     if (elements.dashboard) elements.dashboard.style.display = 'block'; 
-    if (elements.logoutBtn) elements.logoutBtn.style.display = 'inline-block'; 
+    if (elements.logoutBtn) elements.logoutBtn.style.display = 'block'; 
   }
 
   async function handleLogin(e) {
@@ -100,8 +99,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const user = await account.get();
       showDashboard(user);
       handleAnalyzeData(); 
+      handleGetTips();     
       alert("Login successful!");
-      if (elements.logoutBtn) elements.logoutBtn.style.display = 'inline-block'; 
+      if (elements.logoutBtn) elements.logoutBtn.style.display = 'block'; 
     } catch (error) {
       console.error("Login error:", error);
       alert("Login failed: " + error.message);
@@ -128,8 +128,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const currentUser = await account.get();
       showDashboard(currentUser);
       handleAnalyzeData(); 
+      handleGetTips();     
       alert("Account created and logged in!");
-      if (elements.logoutBtn) elements.logoutBtn.style.display = 'inline-block'; 
+      if (elements.logoutBtn) elements.logoutBtn.style.display = 'block'; 
     } catch (error) {
       console.error("Signup error:", error);
       alert("Signup failed: " + error.message);
@@ -167,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
           heartRate: parseInt(elements.heartRate.value),
           bloodPressure: elements.bloodPressure.value,
           bloodOxygen: parseInt(elements.bloodOxygen.value),
-          weight: parseInt(elements.weight.value), 
+          weight: parseInt(elements.weight.value), // Added new weight value
           timestamp: new Date().toISOString() 
         },
         [ 
@@ -179,8 +180,10 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('Health data saved successfully!');
       elements.healthForm.reset();
       handleAnalyzeData(); 
+      handleGetTips(); 
     } catch (error) {
       console.error("Save data error:", error);
+      console.log('Full Appwrite error object:', error); 
       alert('Error saving data: ' + error.message);
     }
   }
@@ -192,6 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
+    // Reverse records to display oldest to newest on chart
     const sortedRecords = records.slice().reverse(); 
 
     const labels = sortedRecords.map(record => {
@@ -200,8 +204,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     const heartRateData = sortedRecords.map(record => record.heartRate);
     const bloodOxygenData = sortedRecords.map(record => record.bloodOxygen);
-    const weightData = sortedRecords.map(record => record.weight); 
+    const weightData = sortedRecords.map(record => record.weight); // Added new weight data
 
+    // Destroy existing chart instance if it exists
     if (heartRateChartInstance) heartRateChartInstance.destroy();
 
     const ctx = elements.heartRateChartCanvas.getContext('2d');
@@ -227,7 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fill: false
           },
           {
-            label: 'Weight (kg)', 
+            label: 'Weight (kg)', // Added new weight dataset
             data: weightData,
             borderColor: '#9966FF',
             backgroundColor: 'rgba(153, 102, 255, 0.2)',
@@ -284,29 +289,32 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       let totalHeartRate = 0;
-      let minHeartRate = 200; 
-      let maxHeartRate = 40;  
+      let minHeartRate = 200; // Initialize high
+      let maxHeartRate = 40;  // Initialize low
 
       let totalBloodOxygen = 0;
-      let minBloodOxygen = 100; 
-      let maxBloodOxygen = 80;  
+      let minBloodOxygen = 100; // Initialize high
+      let maxBloodOxygen = 80;  // Initialize low
 
-      let totalWeight = 0; 
+      let totalWeight = 0; // Added new weight variables
       let minWeight = 500;
       let maxWeight = 0;
 
       let latestBloodPressure = 'N/A'; 
 
       records.forEach((record, index) => {
+        // Heart Rate
         totalHeartRate += record.heartRate;
         minHeartRate = Math.min(minHeartRate, record.heartRate);
         maxHeartRate = Math.max(maxHeartRate, record.heartRate);
 
+        // Blood Oxygen
         totalBloodOxygen += record.bloodOxygen;
         minBloodOxygen = Math.min(minBloodOxygen, record.bloodOxygen);
         maxBloodOxygen = Math.max(maxBloodOxygen, record.bloodOxygen);
 
-        if (record.weight) { 
+        // Weight
+        if (record.weight) { // Check if the record has weight data
             totalWeight += record.weight;
             minWeight = Math.min(minWeight, record.weight);
             maxWeight = Math.max(maxWeight, record.weight);
@@ -319,7 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const avgHeartRate = (totalHeartRate / records.length).toFixed(0);
       const avgBloodOxygen = (totalBloodOxygen / records.length).toFixed(0);
-      const avgWeight = totalWeight > 0 ? (totalWeight / records.filter(r => r.weight).length).toFixed(0) : 'N/A';
+      const avgWeight = totalWeight > 0 ? (totalWeight / records.filter(r => r.weight).length).toFixed(0) : 'N/A'; // Added new average weight
 
       let insightsHtml = `
         <h3>Your Health Insights (${records.length} records analyzed):</h3>
@@ -338,6 +346,13 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (error) {
       console.error("Error fetching or analyzing data:", error);
       elements.insightsContainer.innerHTML = '<p>Error loading insights. Please try again.</p>';
+      if (error.code === 401) {
+         elements.insightsContainer.innerHTML += '<p><strong>Permission Denied:</strong> Ensure "Read Documents" is enabled for "Any (logged in) user" on your collection in Appwrite.</p>';
+      } else if (error.code === 404) {
+          elements.insightsContainer.innerHTML += '<p>Database or Collection not found. Check IDs in app.js.</p>';
+      } else {
+        elements.insightsContainer.innerHTML += `<p>Error details: ${error.message}</p>`;
+      }
       if (heartRateChartInstance) heartRateChartInstance.destroy(); 
     }
   }
@@ -361,7 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
             [
                 Appwrite.Query.equal('userId', user.$id),
                 Appwrite.Query.orderDesc('timestamp'),
-                Appwrite.Query.limit(5)
+                Appwrite.Query.limit(5) // Get latest 5 records for quick check
             ]
         );
         const records = response.documents;
@@ -369,34 +384,39 @@ document.addEventListener('DOMContentLoaded', () => {
         if (records.length > 0) {
             const latestHR = records[0].heartRate;
             const latestBO = records[0].bloodOxygen;
-            const latestBP = records[0].bloodPressure;
-            const latestWeight = records[0].weight; 
+            const latestBP = records[0].bloodPressure; // e.g., "120/80"
+            const latestWeight = records[0].weight; // Get latest weight
             const [systolic, diastolic] = latestBP.split('/').map(Number);
 
-            if (latestHR > 90) { 
+            // Personalized Tips based on thresholds
+            // These are simplified thresholds and should be medically validated for real apps
+            if (latestHR > 90) { // Resting HR usually < 90
                 personalizedTips.push("Your recent heart rate is a bit high. Consider stress reduction techniques like deep breathing or meditation.");
-            } else if (latestHR < 60 && latestHR > 0) { 
+            } else if (latestHR < 60 && latestHR > 0) { // Below 60 for non-athletes
                 personalizedTips.push("Your heart rate seems low. If you're not an athlete, consult a doctor if you feel symptoms like dizziness.");
             }
 
-            if (latestBO < 95) { 
+            if (latestBO < 95) { // Below 95 is generally low for healthy individuals
                 personalizedTips.push("Your recent blood oxygen is on the lower side. Try some deep breathing exercises throughout the day.");
             }
 
-            if (systolic >= 130 || diastolic >= 80) { 
+            if (systolic >= 130 || diastolic >= 80) { // Pre-hypertensive or hypertensive
                 personalizedTips.push("Your recent blood pressure readings suggest you might be approaching or in the high range. Focus on a low-sodium diet and regular exercise.");
-            } else if (systolic < 90 || diastolic < 60) { 
+            } else if (systolic < 90 || diastolic < 60) { // Low blood pressure
                 personalizedTips.push("Your blood pressure appears low. Ensure you're well-hydrated and discuss with a doctor if you experience dizziness.");
             }
             
-            if (latestWeight > 90) {
+            // New personalized tip for weight
+            if (latestWeight > 90) { // Example threshold, you can change this
                 personalizedTips.push("Your recent weight reading is high. Focusing on a balanced diet and increasing physical activity can help.");
             }
         }
     } catch (error) {
         console.error("Error fetching data for personalized tips:", error);
+        // Fallback to generic tips if data fetch fails
     }
 
+    // Generic tips (always available)
     tips.push("Aim for at least 30 minutes of moderate exercise most days of the week.");
     tips.push("Eat a balanced diet rich in fruits, vegetables, and whole grains.");
     tips.push("Stay hydrated by drinking plenty of water throughout the day.");
@@ -446,11 +466,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Health Data
     if (elements.healthForm) elements.healthForm.addEventListener('submit', handleHealthSubmit);
-    if (elements.tipsBtn) elements.tipsBtn.addEventListener('click', handleGetTips);
   }
 
   // 6. INITIALIZE APP
-  setupListeners();
-  checkAuth(); 
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log("DOM fully loaded. Initializing App.");
+    setupListeners();
+    checkAuth(); 
+  });
 
-}); // End of DOMContentLoaded listener
+})(); // End of IIFE

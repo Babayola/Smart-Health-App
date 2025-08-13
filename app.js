@@ -1,4 +1,3 @@
-LATEST WORKING app.js
 // ===== UPDATED APP.JS CONTENT (Adding Weight Metric) =====
 // This file should be named app.js and linked from index.html: <script src="app.js"></script>
 

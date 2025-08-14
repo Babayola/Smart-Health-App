@@ -1,7 +1,7 @@
-// ===== UPDATED APP.JS CONTENT (Adding Weight Metric) =====
+// ===== UPDATED APP.JS CONTENT (Adding Weight Metric & AdSense Fix) =====
 // This file should be named app.js and linked from index.html: <script src="app.js"></script>
 
-console.log("App.js version: 2025-08-05_16:00 - Adding Weight Metric"); // Updated for confirmation
+console.log("App.js version: 2025-08-14_16:00 - AdSense Fix"); // Updated for confirmation
 
 (() => {
   // 1. INITIALIZE APPWRITE
@@ -18,7 +18,7 @@ console.log("App.js version: 2025-08-05_16:00 - Adding Weight Metric"); // Updat
   const COLLECTION_ID = '687a0e65000b8a2d846c';
 
   let heartRateChartInstance = null;
-  
+
   // 2. DOM ELEMENTS
   const elements = {
     // Auth
@@ -33,8 +33,8 @@ console.log("App.js version: 2025-08-05_16:00 - Adding Weight Metric"); // Updat
     signupPassword: document.getElementById('signup-password'),
     showSignup: document.getElementById('show-signup'),
     showLogin: document.getElementById('show-login'),
-    logoutBtn: document.getElementById('logout-btn'), 
-    
+    logoutBtn: document.getElementById('logout-btn'),
+
     // Health Data
     healthForm: document.getElementById('health-form'),
     heartRate: document.getElementById('heartRate'),
@@ -57,15 +57,15 @@ console.log("App.js version: 2025-08-05_16:00 - Adding Weight Metric"); // Updat
     console.log("checkAuth called.");
     try {
       const user = await account.get();
-      console.log("checkAuth: User found:", user); 
+      console.log("checkAuth: User found:", user);
       showDashboard(user);
-      handleAnalyzeData(); 
+      handleAnalyzeData();
       handleGetTips();
-      if (elements.logoutBtn) elements.logoutBtn.style.display = 'block'; 
-    } catch (error) { 
-      console.log("checkAuth: User not authenticated or session invalid. Error:", error); 
+      if (elements.logoutBtn) elements.logoutBtn.style.display = 'block';
+    } catch (error) {
+      console.log("checkAuth: User not authenticated or session invalid. Error:", error);
       showAuth();
-      if (elements.logoutBtn) elements.logoutBtn.style.display = 'none'; 
+      if (elements.logoutBtn) elements.logoutBtn.style.display = 'none';
     }
   }
 
@@ -77,14 +77,29 @@ console.log("App.js version: 2025-08-05_16:00 - Adding Weight Metric"); // Updat
     const signupFormDiv = document.getElementById('signup-form');
     if (loginFormDiv) loginFormDiv.style.display = 'block';
     if (signupFormDiv) signupFormDiv.style.display = 'none';
-    if (elements.logoutBtn) elements.logoutBtn.style.display = 'none'; 
+    if (elements.logoutBtn) elements.logoutBtn.style.display = 'none';
   }
 
   function showDashboard(user) {
     console.log("showDashboard called. User:", user);
     if (elements.authContainer) elements.authContainer.style.display = 'none';
-    if (elements.dashboard) elements.dashboard.style.display = 'block'; 
-    if (elements.logoutBtn) elements.logoutBtn.style.display = 'block'; 
+    if (elements.dashboard) elements.dashboard.style.display = 'block';
+    if (elements.logoutBtn) elements.logoutBtn.style.display = 'block';
+
+    // --- NEW AdSense FIX CODE ---
+    // This tells AdSense to check for ads now that the user is logged in
+    // and the dashboard with publisher content is visible.
+    try {
+      if (window.adsbygoogle && typeof window.adsbygoogle.push === 'function') {
+        window.adsbygoogle.push({});
+        console.log("AdSense push triggered successfully.");
+      } else {
+        console.warn("AdSense script not yet available.");
+      }
+    } catch (e) {
+      console.error("AdSense could not be loaded:", e);
+    }
+    // --- END OF NEW CODE ---
   }
 
   async function handleLogin(e) {
@@ -98,10 +113,10 @@ console.log("App.js version: 2025-08-05_16:00 - Adding Weight Metric"); // Updat
       console.log("Login success. Session:", session);
       const user = await account.get();
       showDashboard(user);
-      handleAnalyzeData(); 
-      handleGetTips();     
+      handleAnalyzeData();
+      handleGetTips();
       alert("Login successful!");
-      if (elements.logoutBtn) elements.logoutBtn.style.display = 'block'; 
+      if (elements.logoutBtn) elements.logoutBtn.style.display = 'block';
     } catch (error) {
       console.error("Login error:", error);
       alert("Login failed: " + error.message);
@@ -113,24 +128,24 @@ console.log("App.js version: 2025-08-05_16:00 - Adding Weight Metric"); // Updat
     console.log("Signup form submitted.");
     try {
       const user = await account.create(
-        Appwrite.ID.unique(), 
+        Appwrite.ID.unique(),
         elements.signupEmail.value,
         elements.signupPassword.value,
         elements.signupName.value
       );
       console.log("Signup success. User:", user);
-      
+
       await account.createEmailPasswordSession(
         elements.signupEmail.value,
         elements.signupPassword.value
       );
-      
+
       const currentUser = await account.get();
       showDashboard(currentUser);
-      handleAnalyzeData(); 
-      handleGetTips();     
+      handleAnalyzeData();
+      handleGetTips();
       alert("Account created and logged in!");
-      if (elements.logoutBtn) elements.logoutBtn.style.display = 'block'; 
+      if (elements.logoutBtn) elements.logoutBtn.style.display = 'block';
     } catch (error) {
       console.error("Signup error:", error);
       alert("Signup failed: " + error.message);
@@ -140,16 +155,16 @@ console.log("App.js version: 2025-08-05_16:00 - Adding Weight Metric"); // Updat
   async function handleLogout() {
     console.log("Logout button clicked.");
     try {
-        await account.deleteSession('current'); 
-        console.log("Logout successful.");
-        alert("You have been logged out.");
-        showAuth(); 
-        if (elements.insightsContainer) elements.insightsContainer.innerHTML = '<p>Login and submit data to get insights</p>';
-        if (elements.tipsContainer) elements.tipsContainer.innerHTML = '<p>Login to get personalized health tips</p>';
-        if (heartRateChartInstance) heartRateChartInstance.destroy();
+      await account.deleteSession('current');
+      console.log("Logout successful.");
+      alert("You have been logged out.");
+      showAuth();
+      if (elements.insightsContainer) elements.insightsContainer.innerHTML = '<p>Login and submit data to get insights</p>';
+      if (elements.tipsContainer) elements.tipsContainer.innerHTML = '<p>Login to get personalized health tips</p>';
+      if (heartRateChartInstance) heartRateChartInstance.destroy();
     } catch (error) {
-        console.error("Logout error:", error);
-        alert("Error logging out: " + error.message);
+      console.error("Logout error:", error);
+      alert("Error logging out: " + error.message);
     }
   }
 
@@ -158,20 +173,20 @@ console.log("App.js version: 2025-08-05_16:00 - Adding Weight Metric"); // Updat
     e.preventDefault();
     console.log("Health form submitted.");
     try {
-      const user = await account.get(); 
+      const user = await account.get();
       const doc = await databases.createDocument(
-        DATABASE_ID,   
-        COLLECTION_ID,   
-        Appwrite.ID.unique(),     
+        DATABASE_ID,
+        COLLECTION_ID,
+        Appwrite.ID.unique(),
         {
-          userId: user.$id, 
+          userId: user.$id,
           heartRate: parseInt(elements.heartRate.value),
           bloodPressure: elements.bloodPressure.value,
           bloodOxygen: parseInt(elements.bloodOxygen.value),
           weight: parseInt(elements.weight.value), // Added new weight value
-          timestamp: new Date().toISOString() 
+          timestamp: new Date().toISOString()
         },
-        [ 
+        [
           Appwrite.Permission.read(Appwrite.Role.user(user.$id)),
           Appwrite.Permission.write(Appwrite.Role.user(user.$id))
         ]
@@ -179,11 +194,11 @@ console.log("App.js version: 2025-08-05_16:00 - Adding Weight Metric"); // Updat
       console.log("Data saved:", doc);
       alert('Health data saved successfully!');
       elements.healthForm.reset();
-      handleAnalyzeData(); 
-      handleGetTips(); 
+      handleAnalyzeData();
+      handleGetTips();
     } catch (error) {
       console.error("Save data error:", error);
-      console.log('Full Appwrite error object:', error); 
+      console.log('Full Appwrite error object:', error);
       alert('Error saving data: ' + error.message);
     }
   }
@@ -194,9 +209,9 @@ console.log("App.js version: 2025-08-05_16:00 - Adding Weight Metric"); // Updat
       console.error("Heart Rate Chart Canvas not found.");
       return;
     }
-    
+
     // Reverse records to display oldest to newest on chart
-    const sortedRecords = records.slice().reverse(); 
+    const sortedRecords = records.slice().reverse();
 
     const labels = sortedRecords.map(record => {
       const date = new Date(record.timestamp);
@@ -268,39 +283,39 @@ console.log("App.js version: 2025-08-05_16:00 - Adding Weight Metric"); // Updat
     }
 
     try {
-      const user = await account.get(); 
+      const user = await account.get();
       const response = await databases.listDocuments(
         DATABASE_ID,
         COLLECTION_ID,
         [
-          Appwrite.Query.equal('userId', user.$id), 
-          Appwrite.Query.orderDesc('timestamp'),    
-          Appwrite.Query.limit(10)                  
+          Appwrite.Query.equal('userId', user.$id),
+          Appwrite.Query.orderDesc('timestamp'),
+          Appwrite.Query.limit(10)
         ]
       );
-      
+
       const records = response.documents;
       console.log("Fetched records for analysis:", records);
 
       if (records.length === 0) {
         elements.insightsContainer.innerHTML = '<p>No health records found. Submit some data to get insights!</p>';
-        if (heartRateChartInstance) heartRateChartInstance.destroy(); 
+        if (heartRateChartInstance) heartRateChartInstance.destroy();
         return;
       }
 
       let totalHeartRate = 0;
       let minHeartRate = 200; // Initialize high
-      let maxHeartRate = 40;  // Initialize low
+      let maxHeartRate = 40; // Initialize low
 
       let totalBloodOxygen = 0;
       let minBloodOxygen = 100; // Initialize high
-      let maxBloodOxygen = 80;  // Initialize low
+      let maxBloodOxygen = 80; // Initialize low
 
       let totalWeight = 0; // Added new weight variables
       let minWeight = 500;
       let maxWeight = 0;
 
-      let latestBloodPressure = 'N/A'; 
+      let latestBloodPressure = 'N/A';
 
       records.forEach((record, index) => {
         // Heart Rate
@@ -315,12 +330,12 @@ console.log("App.js version: 2025-08-05_16:00 - Adding Weight Metric"); // Updat
 
         // Weight
         if (record.weight) { // Check if the record has weight data
-            totalWeight += record.weight;
-            minWeight = Math.min(minWeight, record.weight);
-            maxWeight = Math.max(maxWeight, record.weight);
+          totalWeight += record.weight;
+          minWeight = Math.min(minWeight, record.weight);
+          maxWeight = Math.max(maxWeight, record.weight);
         }
 
-        if (index === 0) { 
+        if (index === 0) {
           latestBloodPressure = record.bloodPressure;
         }
       });
@@ -338,7 +353,7 @@ console.log("App.js version: 2025-08-05_16:00 - Adding Weight Metric"); // Updat
           <li><strong>Weight (kg):</strong> Avg ${avgWeight}, Min ${minWeight}, Max ${maxWeight}</li>
         </ul>
       `;
-      
+
       elements.insightsContainer.innerHTML = insightsHtml;
 
       renderHealthCharts(records);
@@ -347,13 +362,13 @@ console.log("App.js version: 2025-08-05_16:00 - Adding Weight Metric"); // Updat
       console.error("Error fetching or analyzing data:", error);
       elements.insightsContainer.innerHTML = '<p>Error loading insights. Please try again.</p>';
       if (error.code === 401) {
-         elements.insightsContainer.innerHTML += '<p><strong>Permission Denied:</strong> Ensure "Read Documents" is enabled for "Any (logged in) user" on your collection in Appwrite.</p>';
+        elements.insightsContainer.innerHTML += '<p><strong>Permission Denied:</strong> Ensure "Read Documents" is enabled for "Any (logged in) user" on your collection in Appwrite.</p>';
       } else if (error.code === 404) {
-          elements.insightsContainer.innerHTML += '<p>Database or Collection not found. Check IDs in app.js.</p>';
+        elements.insightsContainer.innerHTML += '<p>Database or Collection not found. Check IDs in app.js.</p>';
       } else {
         elements.insightsContainer.innerHTML += `<p>Error details: ${error.message}</p>`;
       }
-      if (heartRateChartInstance) heartRateChartInstance.destroy(); 
+      if (heartRateChartInstance) heartRateChartInstance.destroy();
     }
   }
 
@@ -369,51 +384,51 @@ console.log("App.js version: 2025-08-05_16:00 - Adding Weight Metric"); // Updat
     let personalizedTips = [];
 
     try {
-        const user = await account.get();
-        const response = await databases.listDocuments(
-            DATABASE_ID,
-            COLLECTION_ID,
-            [
-                Appwrite.Query.equal('userId', user.$id),
-                Appwrite.Query.orderDesc('timestamp'),
-                Appwrite.Query.limit(5) // Get latest 5 records for quick check
-            ]
-        );
-        const records = response.documents;
+      const user = await account.get();
+      const response = await databases.listDocuments(
+        DATABASE_ID,
+        COLLECTION_ID,
+        [
+          Appwrite.Query.equal('userId', user.$id),
+          Appwrite.Query.orderDesc('timestamp'),
+          Appwrite.Query.limit(5) // Get latest 5 records for quick check
+        ]
+      );
+      const records = response.documents;
 
-        if (records.length > 0) {
-            const latestHR = records[0].heartRate;
-            const latestBO = records[0].bloodOxygen;
-            const latestBP = records[0].bloodPressure; // e.g., "120/80"
-            const latestWeight = records[0].weight; // Get latest weight
-            const [systolic, diastolic] = latestBP.split('/').map(Number);
+      if (records.length > 0) {
+        const latestHR = records[0].heartRate;
+        const latestBO = records[0].bloodOxygen;
+        const latestBP = records[0].bloodPressure; // e.g., "120/80"
+        const latestWeight = records[0].weight; // Get latest weight
+        const [systolic, diastolic] = latestBP.split('/').map(Number);
 
-            // Personalized Tips based on thresholds
-            // These are simplified thresholds and should be medically validated for real apps
-            if (latestHR > 90) { // Resting HR usually < 90
-                personalizedTips.push("Your recent heart rate is a bit high. Consider stress reduction techniques like deep breathing or meditation.");
-            } else if (latestHR < 60 && latestHR > 0) { // Below 60 for non-athletes
-                personalizedTips.push("Your heart rate seems low. If you're not an athlete, consult a doctor if you feel symptoms like dizziness.");
-            }
-
-            if (latestBO < 95) { // Below 95 is generally low for healthy individuals
-                personalizedTips.push("Your recent blood oxygen is on the lower side. Try some deep breathing exercises throughout the day.");
-            }
-
-            if (systolic >= 130 || diastolic >= 80) { // Pre-hypertensive or hypertensive
-                personalizedTips.push("Your recent blood pressure readings suggest you might be approaching or in the high range. Focus on a low-sodium diet and regular exercise.");
-            } else if (systolic < 90 || diastolic < 60) { // Low blood pressure
-                personalizedTips.push("Your blood pressure appears low. Ensure you're well-hydrated and discuss with a doctor if you experience dizziness.");
-            }
-            
-            // New personalized tip for weight
-            if (latestWeight > 90) { // Example threshold, you can change this
-                personalizedTips.push("Your recent weight reading is high. Focusing on a balanced diet and increasing physical activity can help.");
-            }
+        // Personalized Tips based on thresholds
+        // These are simplified thresholds and should be medically validated for real apps
+        if (latestHR > 90) { // Resting HR usually < 90
+          personalizedTips.push("Your recent heart rate is a bit high. Consider stress reduction techniques like deep breathing or meditation.");
+        } else if (latestHR < 60 && latestHR > 0) { // Below 60 for non-athletes
+          personalizedTips.push("Your heart rate seems low. If you're not an athlete, consult a doctor if you feel symptoms like dizziness.");
         }
+
+        if (latestBO < 95) { // Below 95 is generally low for healthy individuals
+          personalizedTips.push("Your recent blood oxygen is on the lower side. Try some deep breathing exercises throughout the day.");
+        }
+
+        if (systolic >= 130 || diastolic >= 80) { // Pre-hypertensive or hypertensive
+          personalizedTips.push("Your recent blood pressure readings suggest you might be approaching or in the high range. Focus on a low-sodium diet and regular exercise.");
+        } else if (systolic < 90 || diastolic < 60) { // Low blood pressure
+          personalizedTips.push("Your blood pressure appears low. Ensure you're well-hydrated and discuss with a doctor if you experience dizziness.");
+        }
+
+        // New personalized tip for weight
+        if (latestWeight > 90) { // Example threshold, you can change this
+          personalizedTips.push("Your recent weight reading is high. Focusing on a balanced diet and increasing physical activity can help.");
+        }
+      }
     } catch (error) {
-        console.error("Error fetching data for personalized tips:", error);
-        // Fallback to generic tips if data fetch fails
+      console.error("Error fetching data for personalized tips:", error);
+      // Fallback to generic tips if data fetch fails
     }
 
     // Generic tips (always available)
@@ -427,17 +442,17 @@ console.log("App.js version: 2025-08-05_16:00 - Adding Weight Metric"); // Updat
 
     let tipsHtml = '<h3>Quick Health Tips:</h3>';
     if (personalizedTips.length > 0) {
-        tipsHtml += '<h4>Personalized Suggestions:</h4><ul>';
-        personalizedTips.forEach(tip => {
-            tipsHtml += `<li style="font-weight: bold; color: var(--primary);">${tip}</li>`;
-        });
-        tipsHtml += '</ul><h4>General Tips:</h4><ul>';
+      tipsHtml += '<h4>Personalized Suggestions:</h4><ul>';
+      personalizedTips.forEach(tip => {
+        tipsHtml += `<li style="font-weight: bold; color: var(--primary);">${tip}</li>`;
+      });
+      tipsHtml += '</ul><h4>General Tips:</h4><ul>';
     } else {
-        tipsHtml += '<ul>';
+      tipsHtml += '<ul>';
     }
 
     tips.forEach(tip => {
-        tipsHtml += `<li>${tip}</li>`;
+      tipsHtml += `<li>${tip}</li>`;
     });
     tipsHtml += '</ul>';
 
@@ -449,15 +464,15 @@ console.log("App.js version: 2025-08-05_16:00 - Adding Weight Metric"); // Updat
     // Auth
     if (elements.loginForm) elements.loginForm.addEventListener('submit', handleLogin);
     if (elements.signupForm) elements.signupForm.addEventListener('submit', handleSignup);
-    if (elements.logoutBtn) elements.logoutBtn.addEventListener('click', handleLogout); 
-    
+    if (elements.logoutBtn) elements.logoutBtn.addEventListener('click', handleLogout);
+
     // Form toggles
     if (elements.showSignup) elements.showSignup.addEventListener('click', (e) => {
       e.preventDefault();
       document.getElementById('login-form').style.display = 'none';
       document.getElementById('signup-form').style.display = 'block';
     });
-    
+
     if (elements.showLogin) elements.showLogin.addEventListener('click', (e) => {
       e.preventDefault();
       document.getElementById('signup-form').style.display = 'none';
@@ -472,7 +487,7 @@ console.log("App.js version: 2025-08-05_16:00 - Adding Weight Metric"); // Updat
   document.addEventListener('DOMContentLoaded', () => {
     console.log("DOM fully loaded. Initializing App.");
     setupListeners();
-    checkAuth(); 
+    checkAuth();
   });
 
 })(); // End of IIFE

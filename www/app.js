@@ -1,15 +1,17 @@
-// ===== COMPLETE AND FINAL APP.JS (For AdMob & Mobile Deployment) =====
-import { AdMob } from '@admob-plus/capacitor'; // <-- NEW: Import AdMob library
+// ===== FINAL, VERIFIED APP.JS CODE (Mobile Build) =====
+import { AdMob } from '@admob-plus/capacitor'; // Required for AdMob plugin
 
-console.log("App.js version: 2025-09-28_18:15 - FINAL COMPLETE CODE"); 
+console.log("App.js version: 2025-09-28_18:15 - FINAL MOBILE BUILD"); 
 
 document.addEventListener('DOMContentLoaded', () => {
 
   // --- CONFIGURATION CONSTANTS ---
   const DATABASE_ID = '687a0e5a0031f474d1c7';
   const COLLECTION_ID = '687a0e65000b8a2d846c';
-  const INTERSTITIAL_AD_UNIT_ID = 'ca-app-pub-9239900240710331/2391487590'; // YOUR INTERSTITIAL ID
+  const INTERSTITIAL_AD_UNIT_ID = 'ca-app-pub-9239900240710331/2391487590';
 
+  let heartRateChartInstance = null;
+  
   // 1. INITIALIZE APPWRITE
   const client = new Appwrite.Client();
   client
@@ -18,8 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const account = new Appwrite.Account(client);
   const databases = new Appwrite.Databases(client);
-
-  let heartRateChartInstance = null;
   
   // 2. DOM ELEMENTS
   const elements = {
@@ -47,15 +47,14 @@ document.addEventListener('DOMContentLoaded', () => {
     tipsBtn: document.getElementById('tips-btn') 
   };
 
+
   // 3. ADMOB PRELOAD FUNCTION
   async function preloadAdMobInterstitial() {
       try {
-          // Use test ads until final submission: isTesting: true
           await AdMob.prepareInterstitial({
               adId: INTERSTITIAL_AD_UNIT_ID,
-              isTesting: true,
+              isTesting: true, // Use test ads during development
           });
-          console.log("AdMob Interstitial Preloaded.");
       } catch (e) {
           console.warn('AdMob Preload Failed:', e);
       }
@@ -69,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
       showDashboard(user);
       handleAnalyzeData(); 
       handleGetTips();
-      preloadAdMobInterstitial(); // Preload ad on initial load
+      preloadAdMobInterstitial(); 
     } catch (error) { 
       showAuth();
     }
@@ -89,8 +88,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (elements.authContainer) elements.authContainer.style.display = 'none';
     if (elements.dashboard) elements.dashboard.style.display = 'block'; 
     if (elements.logoutBtn) elements.logoutBtn.style.display = 'inline-block'; 
-    
-    // Adsense is removed. This spot is reserved for Banner Ads or other mobile placement.
   }
 
   async function handleLogin(e) {
@@ -151,8 +148,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 2. IMPORTANT: Preload the next ad while the user is interacting with the current one
         preloadAdMobInterstitial();
+
     } catch (adError) {
-        // If the ad fails to show (e.g., ad not loaded), we log it but continue the core app process.
         console.warn("Interstitial ad failed to show, continuing data submission.", adError);
     }
     // ---------------------------------------------
@@ -390,4 +387,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (elements.showSignup) elements.showSignup.addEventListener('click', (e) => {
       e.preventDefault();
       document.getElementById('login-form').style.display = 'none';
-      document.
+      document.getElementById('signup-form').style.display = 'block';
+    });
+    if (elements.showLogin) elements.showLogin.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.getElementById('signup-form').style.display = 'none';
+      document.getElementById('login-form').style.display = 'block';
+    });
+    if (elements.healthForm) elements.healthForm.addEventListener('submit', handleHealthSubmit);
+    if (elements.tipsBtn) elements.tipsBtn.addEventListener('click', handleGetTips);
+  }
+
+  setupListeners();
+  checkAuth(); 
+});

@@ -1,8 +1,16 @@
-// ===== FINAL CORRECTED APP.JS CONTENT (AdSense Fix) =====
-console.log("App.js version: 2025-08-14_17:00 - Final AdSense Fix"); 
+// ===== COMPLETE AND FINAL APP.JS (For AdMob & Mobile Deployment) =====
+import { AdMob } from '@admob-plus/capacitor'; // <-- NEW: Import AdMob library
+
+console.log("App.js version: 2025-09-28_18:15 - FINAL COMPLETE CODE"); 
 
 document.addEventListener('DOMContentLoaded', () => {
 
+  // --- CONFIGURATION CONSTANTS ---
+  const DATABASE_ID = '687a0e5a0031f474d1c7';
+  const COLLECTION_ID = '687a0e65000b8a2d846c';
+  const INTERSTITIAL_AD_UNIT_ID = 'ca-app-pub-9239900240710331/2391487590'; // YOUR INTERSTITIAL ID
+
+  // 1. INITIALIZE APPWRITE
   const client = new Appwrite.Client();
   client
     .setEndpoint('https://cloud.appwrite.io/v1')
@@ -11,11 +19,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const account = new Appwrite.Account(client);
   const databases = new Appwrite.Databases(client);
 
-  const DATABASE_ID = '687a0e5a0031f474d1c7';
-  const COLLECTION_ID = '687a0e65000b8a2d846c';
-
   let heartRateChartInstance = null;
   
+  // 2. DOM ELEMENTS
   const elements = {
     authContainer: document.getElementById('auth-container'),
     dashboard: document.getElementById('dashboard'),
@@ -41,33 +47,29 @@ document.addEventListener('DOMContentLoaded', () => {
     tipsBtn: document.getElementById('tips-btn') 
   };
 
-  function showDashboard(user) {
-    if (elements.authContainer) elements.authContainer.style.display = 'none';
-    if (elements.dashboard) elements.dashboard.style.display = 'block'; 
-    if (elements.logoutBtn) elements.logoutBtn.style.display = 'block'; 
-
-    // --- FINAL ADSENSE FIX ---
-    // Make the ad unit visible and push the ad load command.
-    try {
-        const adContainer = document.querySelector('.adsbygoogle');
-        if (adContainer && window.adsbygoogle && typeof window.adsbygoogle.push === 'function') {
-            adContainer.style.display = 'block';
-            window.adsbygoogle.push({});
-            console.log("AdSense push triggered successfully.");
-        }
-    } catch (e) {
-        console.error("AdSense could not be loaded:", e);
-    }
+  // 3. ADMOB PRELOAD FUNCTION
+  async function preloadAdMobInterstitial() {
+      try {
+          // Use test ads until final submission: isTesting: true
+          await AdMob.prepareInterstitial({
+              adId: INTERSTITIAL_AD_UNIT_ID,
+              isTesting: true,
+          });
+          console.log("AdMob Interstitial Preloaded.");
+      } catch (e) {
+          console.warn('AdMob Preload Failed:', e);
+      }
   }
 
-  // --- REST OF YOUR CORRECT AND WORKING APP.JS CODE ---
-  // (The rest of your code for login, signup, data submission, etc., remains the same)
+
+  // 4. AUTHENTICATION FUNCTIONS
   async function checkAuth() {
     try {
       const user = await account.get();
       showDashboard(user);
       handleAnalyzeData(); 
       handleGetTips();
+      preloadAdMobInterstitial(); // Preload ad on initial load
     } catch (error) { 
       showAuth();
     }
@@ -83,6 +85,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (elements.logoutBtn) elements.logoutBtn.style.display = 'none'; 
   }
 
+  function showDashboard(user) {
+    if (elements.authContainer) elements.authContainer.style.display = 'none';
+    if (elements.dashboard) elements.dashboard.style.display = 'block'; 
+    if (elements.logoutBtn) elements.logoutBtn.style.display = 'inline-block'; 
+    
+    // Adsense is removed. This spot is reserved for Banner Ads or other mobile placement.
+  }
+
   async function handleLogin(e) {
     e.preventDefault();
     try {
@@ -92,6 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
       handleAnalyzeData(); 
       handleGetTips(); 
       alert("Login successful!");
+      preloadAdMobInterstitial(); 
     } catch (error) {
       console.error("Login error:", error);
       alert("Login failed: " + error.message);
@@ -108,6 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
       handleAnalyzeData(); 
       handleGetTips(); 
       alert("Account created and logged in!");
+      preloadAdMobInterstitial(); 
     } catch (error) {
       console.error("Signup error:", error);
       alert("Signup failed: " + error.message);
@@ -128,8 +140,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // 5. HEALTH DATA FUNCTIONS
   async function handleHealthSubmit(e) {
     e.preventDefault();
+    
+    // --- ADMOB: SHOW AD BEFORE DATA PROCESSING ---
+    try {
+        // 1. Show the ad (it will appear if preloaded and ready)
+        await AdMob.showInterstitial(); 
+        
+        // 2. IMPORTANT: Preload the next ad while the user is interacting with the current one
+        preloadAdMobInterstitial();
+    } catch (adError) {
+        // If the ad fails to show (e.g., ad not loaded), we log it but continue the core app process.
+        console.warn("Interstitial ad failed to show, continuing data submission.", adError);
+    }
+    // ---------------------------------------------
+    
     try {
       const user = await account.get(); 
       await databases.createDocument(
@@ -159,8 +186,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // --- CHART RENDERING FUNCTION ---
   function renderHealthCharts(records) {
     if (!elements.heartRateChartCanvas) return;
+    
     const sortedRecords = records.slice().reverse(); 
     const labels = sortedRecords.map(record => {
       const date = new Date(record.timestamp);
@@ -222,16 +251,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // --- ENHANCED ANALYSIS FUNCTION ---
   async function handleAnalyzeData() {
     if (!elements.insightsContainer) return;
+
     try {
       const user = await account.get(); 
-      const response = await databases.listDocuments(DATABASE_ID, COLLECTION_ID, [
+      const response = await databases.listDocuments(
+        DATABASE_ID,
+        COLLECTION_ID,
+        [
           Appwrite.Query.equal('userId', user.$id), 
           Appwrite.Query.orderDesc('timestamp'),    
           Appwrite.Query.limit(10)                  
-      ]);
+        ]
+      );
+      
       const records = response.documents;
+
       if (records.length === 0) {
         elements.insightsContainer.innerHTML = '<p>No health records found. Submit some data to get insights!</p>';
         if (heartRateChartInstance) heartRateChartInstance.destroy(); 
@@ -257,13 +294,16 @@ document.addEventListener('DOMContentLoaded', () => {
             maxWeight = Math.max(maxWeight, record.weight);
             weightCount++;
         }
+
         if (index === 0) { 
           latestBloodPressure = record.bloodPressure;
         }
       });
+
       const avgHeartRate = (totalHeartRate / records.length).toFixed(0);
       const avgBloodOxygen = (totalBloodOxygen / records.length).toFixed(0);
       const avgWeight = weightCount > 0 ? (totalWeight / weightCount).toFixed(0) : 'N/A';
+
       let insightsHtml = `
         <h3>Your Health Insights (${records.length} records analyzed):</h3>
         <ul>
@@ -273,6 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <li><strong>Weight (kg):</strong> Avg ${avgWeight}, Min ${minWeight}, Max ${maxWeight}</li>
         </ul>
       `;
+      
       elements.insightsContainer.innerHTML = insightsHtml;
       renderHealthCharts(records);
     } catch (error) {
@@ -281,24 +322,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // --- ENHANCED GET TIPS FUNCTION ---
   async function handleGetTips() {
     if (!elements.tipsContainer) return;
+
     let tips = [];
     let personalizedTips = [];
+
     try {
         const user = await account.get();
-        const response = await databases.listDocuments(DATABASE_ID, COLLECTION_ID, [
-            Appwrite.Query.equal('userId', user.$id),
-            Appwrite.Query.orderDesc('timestamp'),
-            Appwrite.Query.limit(5)
-        ]);
+        const response = await databases.listDocuments(
+            DATABASE_ID,
+            COLLECTION_ID,
+            [
+                Appwrite.Query.equal('userId', user.$id),
+                Appwrite.Query.orderDesc('timestamp'),
+                Appwrite.Query.limit(5)
+            ]
+        );
         const records = response.documents;
+
         if (records.length > 0) {
             const latestHR = records[0].heartRate;
             const latestBO = records[0].bloodOxygen;
             const latestBP = records[0].bloodPressure;
             const latestWeight = records[0].weight;
             const [systolic, diastolic] = latestBP.split('/').map(Number);
+
             if (latestHR > 90) personalizedTips.push("Your recent heart rate is a bit high. Consider stress reduction techniques like deep breathing or meditation.");
             else if (latestHR < 60 && latestHR > 0) personalizedTips.push("Your heart rate seems low. If you're not an athlete, consult a doctor if you feel symptoms like dizziness.");
             if (latestBO < 95) personalizedTips.push("Your recent blood oxygen is on the lower side. Try some deep breathing exercises throughout the day.");
@@ -340,16 +390,4 @@ document.addEventListener('DOMContentLoaded', () => {
     if (elements.showSignup) elements.showSignup.addEventListener('click', (e) => {
       e.preventDefault();
       document.getElementById('login-form').style.display = 'none';
-      document.getElementById('signup-form').style.display = 'block';
-    });
-    if (elements.showLogin) elements.showLogin.addEventListener('click', (e) => {
-      e.preventDefault();
-      document.getElementById('signup-form').style.display = 'none';
-      document.getElementById('login-form').style.display = 'block';
-    });
-    if (elements.healthForm) elements.healthForm.addEventListener('submit', handleHealthSubmit);
-  }
-
-  setupListeners();
-  checkAuth(); 
-});
+      document.

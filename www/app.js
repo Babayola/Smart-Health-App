@@ -1,5 +1,4 @@
 // ===== FINAL, VERIFIED APP.JS CODE (Mobile Build) =====
-import { AdMob } from '@admob-plus/capacitor'; // Required for AdMob plugin
 
 console.log("App.js version: 2025-09-28_18:15 - FINAL MOBILE BUILD"); 
 
@@ -140,20 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 5. HEALTH DATA FUNCTIONS
   async function handleHealthSubmit(e) {
     e.preventDefault();
-    
-    // --- ADMOB: SHOW AD BEFORE DATA PROCESSING ---
-    try {
-        // 1. Show the ad (it will appear if preloaded and ready)
-        await AdMob.showInterstitial(); 
         
-        // 2. IMPORTANT: Preload the next ad while the user is interacting with the current one
-        preloadAdMobInterstitial();
-
-    } catch (adError) {
-        console.warn("Interstitial ad failed to show, continuing data submission.", adError);
-    }
-    // ---------------------------------------------
-    
     try {
       const user = await account.get(); 
       await databases.createDocument(

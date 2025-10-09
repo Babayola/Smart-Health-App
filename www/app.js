@@ -1,16 +1,16 @@
-// ===== FINAL, VERIFIED APP.JS CODE (Mobile Build) =====
+// ===== FINAL, VERIFIED APP.JS CODE (Mobile Build) - ADMOB RE-ENABLED =====
 
-console.log("App.js version: 2025-09-28_18:15 - FINAL MOBILE BUILD - ADMOB DISABLED"); 
+console.log("App.js version: 2025-09-28_18:15 - FINAL MOBILE BUILD - ADMOB ENABLED"); 
 
 document.addEventListener('DOMContentLoaded', () => {
 
   // --- CONFIGURATION CONSTANTS ---
   const DATABASE_ID = '687a0e5a0031f474d1c7';
   const COLLECTION_ID = '687a0e65000b8a2d846c';
-  /*
-  // ADMOB DISABLED: COMMENTED OUT AD UNIT ID
+  
+  // ADMOB RE-ENABLED: UNCOMMENTED AD UNIT ID
   const INTERSTITIAL_AD_UNIT_ID = 'ca-app-pub-9239900240710331/2391487590';
-  */
+  
 
   let heartRateChartInstance = null;
   
@@ -50,10 +50,10 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
 
-  // 3. ADMOB PRELOAD FUNCTION - ENTIRELY COMMENTED OUT
-  /*
+  // 3. ADMOB PRELOAD FUNCTION - RESTORED
   async function preloadAdMobInterstitial() {
       try {
+          // NOTE: We rely on the global AdMob object from the native plugin.
           await AdMob.prepareInterstitial({
               adId: INTERSTITIAL_AD_UNIT_ID,
               isTesting: true, // Use test ads during development
@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
           console.warn('AdMob Preload Failed:', e);
       }
   }
-  */
+  
 
 
   // 4. AUTHENTICATION FUNCTIONS
@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
       showDashboard(user);
       handleAnalyzeData(); 
       handleGetTips();
-      // preloadAdMobInterstitial(); // ADMOB DISABLED
+      preloadAdMobInterstitial(); // ADMOB RESTORED
     } catch (error) { 
       showAuth();
     }
@@ -103,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
       handleAnalyzeData(); 
       handleGetTips(); 
       alert("Login successful!");
-      // preloadAdMobInterstitial(); // ADMOB DISABLED
+      preloadAdMobInterstitial(); // ADMOB RESTORED
     } catch (error) {
       console.error("Login error:", error);
       alert("Login failed: " + error.message);
@@ -120,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
       handleAnalyzeData(); 
       handleGetTips(); 
       alert("Account created and logged in!");
-      // preloadAdMobInterstitial(); // ADMOB DISABLED
+      preloadAdMobInterstitial(); // ADMOB RESTORED
     } catch (error) {
       console.error("Signup error:", error);
       alert("Signup failed: " + error.message);
@@ -144,6 +144,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // 5. HEALTH DATA FUNCTIONS
   async function handleHealthSubmit(e) {
     e.preventDefault();
+    
+    // --- ADMOB: SHOW AD BEFORE DATA PROCESSING (RESTORED) ---
+    try {
+        // 1. Show the ad (it will appear if preloaded and ready)
+        await AdMob.showInterstitial(); 
+        
+        // 2. IMPORTANT: Preload the next ad while the user is interacting with the current one
+        preloadAdMobInterstitial();
+
+    } catch (adError) {
+        console.warn("Interstitial ad failed to show, continuing data submission. Ensure AdMob is installed and configured.", adError);
+    }
+    // ---------------------------------------------
         
     try {
       const user = await account.get(); 
@@ -366,29 +379,4 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     tips.forEach(tip => tipsHtml += `<li>${tip}</li>`);
-    tipsHtml += '</ul>';
-
-    elements.tipsContainer.innerHTML = tipsHtml;
-  }
-
-  function setupListeners() {
-    if (elements.loginForm) elements.loginForm.addEventListener('submit', handleLogin);
-    if (elements.signupForm) elements.signupForm.addEventListener('submit', handleSignup);
-    if (elements.logoutBtn) elements.logoutBtn.addEventListener('click', handleLogout); 
-    if (elements.showSignup) elements.showSignup.addEventListener('click', (e) => {
-      e.preventDefault();
-      document.getElementById('login-form').style.display = 'none';
-      document.getElementById('signup-form').style.display = 'block';
-    });
-    if (elements.showLogin) elements.showLogin.addEventListener('click', (e) => {
-      e.preventDefault();
-      document.getElementById('signup-form').style.display = 'none';
-      document.getElementById('login-form').style.display = 'block';
-    });
-    if (elements.healthForm) elements.healthForm.addEventListener('submit', handleHealthSubmit);
-    if (elements.tipsBtn) elements.tipsBtn.addEventListener('click', handleGetTips);
-  }
-
-  setupListeners();
-  checkAuth(); 
-});
+    tipsHtml += '</ul>

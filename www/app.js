@@ -1,6 +1,6 @@
 // ===== NEW, SAFE APP.JS CODE (AdMob Enabled) =====
 
-console.log("App.js version: 2025-10-09 - ADMOB RE-ENABLED WITH SAFETY CHECK"); 
+console.log("App.js version: 2025-10-10 - ADMOB & DATA SUBMIT FIXES"); 
 
 // --- 1. ADMOB SAFETY WRAPPER ---
 // We check if AdMob is defined before running the core app logic.
@@ -164,26 +164,26 @@ function initializeCoreAppLogic() {
                 // Check if the ad is ready to show
                 const isAdReady = await AdMob.isInterstitialReady();
     
-            if (isAdReady.ready) {
-                console.log("Interstitial ad is ready. Showing ad.");
-                await AdMob.showInterstitial();
-            } else {
-                console.log("Interstitial ad not ready. Preparing ad immediately.");
-                // If not ready, prepare it NOW and show it immediately after preparation.
-                await preloadAdMobInterstitial(); 
-        
-                // Check readiness again after trying to prepare
-                const isAdReadyAfterPrep = await AdMob.isInterstitialReady();
-                if (isAdReadyAfterPrep.ready) {
+                if (isAdReady.ready) {
+                    console.log("Interstitial ad is ready. Showing ad.");
                     await AdMob.showInterstitial();
                 } else {
-                    console.log("Ad still not ready after immediate prep. Skipping ad display.");
+                    console.log("Interstitial ad not ready. Preparing ad immediately.");
+                    // If not ready, prepare it NOW and show it immediately after preparation.
+                    await preloadAdMobInterstitial(); 
+        
+                    // Check readiness again after trying to prepare
+                    const isAdReadyAfterPrep = await AdMob.isInterstitialReady();
+                    if (isAdReadyAfterPrep.ready) {
+                        await AdMob.showInterstitial();
+                    } else {
+                        console.log("Ad still not ready after immediate prep. Skipping ad display.");
+                    }
                 }
-            }
     
-    // Always preload the next ad for future interactions
-    preloadAdMobInterstitial(); 
-}
+                // Always preload the next ad for future interactions
+                preloadAdMobInterstitial(); 
+            }
         } catch (error) {
             console.error("Signup error:", error);
             alert("Signup failed: " + error.message);
@@ -213,21 +213,46 @@ function initializeCoreAppLogic() {
     // 5. HEALTH DATA FUNCTIONS
     async function handleHealthSubmit(e) {
         e.preventDefault();
-            
+        
+        let user;
         try {
-            const user = await account.get(); 
+            user = await account.get(); 
+        } catch (error) {
+            // CRITICAL CHECK: User session is no longer valid
+            console.error("Save data error: User session expired or invalid. Cannot retrieve user ID.");
+            alert('Error saving data: Your session is invalid. Please log in again.');
+            showAuth(); 
+            return;
+        }
+
+        // Get values
+        const heartRate = elements.heartRate.value;
+        const bloodPressure = elements.bloodPressure.value;
+        const bloodOxygen = elements.bloodOxygen.value;
+        const weight = elements.weight.value;
+
+        // Validation: Check if at least one field has data
+        if (!heartRate && !bloodPressure && !bloodOxygen && !weight) {
+            alert('Please enter at least one health metric to save.');
+            return;
+        }
+
+        // Prepare data object, only including metrics that have a value
+        const data = {};
+        if (heartRate) data.heartRate = parseInt(heartRate);
+        if (bloodPressure) data.bloodPressure = bloodPressure; // Stored as string, e.g., "120/80"
+        if (bloodOxygen) data.bloodOxygen = parseInt(bloodOxygen);
+        // Correctly handle weight as float for potential decimal values
+        if (weight) data.weight = parseFloat(weight); 
+        data.timestamp = new Date().toISOString(); // Add timestamp directly to data
+
+        try {
+            // Appwrite document creation
             await databases.createDocument(
-                DATABASE_ID,   
-                COLLECTION_ID,   
-                Appwrite.ID.unique(),     
-                {
-                    userId: user.$id, 
-                    heartRate: parseInt(elements.heartRate.value),
-                    bloodPressure: elements.bloodPressure.value,
-                    bloodOxygen: parseInt(elements.bloodOxygen.value),
-                    weight: parseInt(elements.weight.value), 
-                    timestamp: new Date().toISOString() 
-                },
+                DATABASE_ID,  
+                COLLECTION_ID,  
+                Appwrite.ID.unique(),    
+                data,
                 [ 
                     Appwrite.Permission.read(Appwrite.Role.user(user.$id)),
                     Appwrite.Permission.write(Appwrite.Role.user(user.$id))
@@ -251,67 +276,67 @@ function initializeCoreAppLogic() {
 
     // --- CHART RENDERING FUNCTION (UNCHANGED) ---
     function renderHealthCharts(records) {
-      if (!elements.heartRateChartCanvas) return;
-      
-      const sortedRecords = records.slice().reverse(); 
-      const labels = sortedRecords.map(record => {
-        const date = new Date(record.timestamp);
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      });
-      const heartRateData = sortedRecords.map(record => record.heartRate);
-      const bloodOxygenData = sortedRecords.map(record => record.bloodOxygen);
-      const weightData = sortedRecords.map(record => record.weight); 
+        if (!elements.heartRateChartCanvas) return;
+        
+        const sortedRecords = records.slice().reverse(); 
+        const labels = sortedRecords.map(record => {
+            const date = new Date(record.timestamp);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        });
+        const heartRateData = sortedRecords.map(record => record.heartRate);
+        const bloodOxygenData = sortedRecords.map(record => record.bloodOxygen);
+        const weightData = sortedRecords.map(record => record.weight); 
 
-      if (heartRateChartInstance) heartRateChartInstance.destroy();
+        if (heartRateChartInstance) heartRateChartInstance.destroy();
 
-      const ctx = elements.heartRateChartCanvas.getContext('2d');
-      heartRateChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [
-            {
-              label: 'Heart Rate (bpm)',
-              data: heartRateData,
-              borderColor: '#FF6384',
-              backgroundColor: 'rgba(255, 99, 132, 0.2)',
-              tension: 0.1,
-              fill: false
+        const ctx = elements.heartRateChartCanvas.getContext('2d');
+        heartRateChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Heart Rate (bpm)',
+                        data: heartRateData,
+                        borderColor: '#FF6384',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        tension: 0.1,
+                        fill: false
+                    },
+                    {
+                        label: 'Blood Oxygen (%)',
+                        data: bloodOxygenData,
+                        borderColor: '#36A2EB',
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        tension: 0.1,
+                        fill: false
+                    },
+                    {
+                        label: 'Weight (kg)', 
+                        data: weightData,
+                        borderColor: '#9966FF',
+                        backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                        tension: 0.1,
+                        fill: false
+                    }
+                ]
             },
-            {
-              label: 'Blood Oxygen (%)',
-              data: bloodOxygenData,
-              borderColor: '#36A2EB',
-              backgroundColor: 'rgba(54, 162, 235, 0.2)',
-              tension: 0.1,
-              fill: false
-            },
-            {
-              label: 'Weight (kg)', 
-              data: weightData,
-              borderColor: '#9966FF',
-              backgroundColor: 'rgba(153, 102, 255, 0.2)',
-              tension: 0.1,
-              fill: false
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: false
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Health Metrics Over Time (Last 10 Records)'
+                    }
+                }
             }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: false
-            }
-          },
-          plugins: {
-            title: {
-              display: true,
-              text: 'Health Metrics Over Time (Last 10 Records)'
-            }
-          }
-        }
-      });
+        });
     }
 
     // --- ENHANCED ANALYSIS FUNCTION (UNCHANGED) ---
@@ -319,69 +344,69 @@ function initializeCoreAppLogic() {
         if (!elements.insightsContainer) return;
 
         try {
-          const user = await account.get(); 
-          const response = await databases.listDocuments(
-            DATABASE_ID,
-            COLLECTION_ID,
-            [
-              Appwrite.Query.equal('userId', user.$id), 
-              Appwrite.Query.orderDesc('timestamp'),    
-              Appwrite.Query.limit(10)                  
-            ]
-          );
-          
-          const records = response.documents;
+            const user = await account.get(); 
+            const response = await databases.listDocuments(
+                DATABASE_ID,
+                COLLECTION_ID,
+                [
+                    Appwrite.Query.equal('userId', user.$id), 
+                    Appwrite.Query.orderDesc('timestamp'),    
+                    Appwrite.Query.limit(10)                    
+                ]
+            );
+            
+            const records = response.documents;
 
-          if (records.length === 0) {
-            elements.insightsContainer.innerHTML = '<p>No health records found. Submit some data to get insights!</p>';
-            if (heartRateChartInstance) heartRateChartInstance.destroy(); 
-            return;
-          }
-
-          let totalHeartRate = 0, minHeartRate = 200, maxHeartRate = 40;
-          let totalBloodOxygen = 0, minBloodOxygen = 100, maxBloodOxygen = 80;
-          let totalWeight = 0, minWeight = 500, maxWeight = 0, weightCount = 0;
-          let latestBloodPressure = 'N/A'; 
-
-          records.forEach((record, index) => {
-            totalHeartRate += record.heartRate;
-            minHeartRate = Math.min(minHeartRate, record.heartRate);
-            maxHeartRate = Math.max(maxHeartRate, record.heartRate);
-            totalBloodOxygen += record.bloodOxygen;
-            minBloodOxygen = Math.min(minBloodOxygen, record.bloodOxygen);
-            maxBloodOxygen = Math.max(maxBloodOxygen, record.bloodOxygen);
-
-            if (record.weight) { 
-                totalWeight += record.weight;
-                minWeight = Math.min(minWeight, record.weight);
-                maxWeight = Math.max(maxWeight, record.weight);
-                weightCount++;
+            if (records.length === 0) {
+                elements.insightsContainer.innerHTML = '<p>No health records found. Submit some data to get insights!</p>';
+                if (heartRateChartInstance) heartRateChartInstance.destroy(); 
+                return;
             }
 
-            if (index === 0) { 
-              latestBloodPressure = record.bloodPressure;
-            }
-          });
+            let totalHeartRate = 0, minHeartRate = 200, maxHeartRate = 40;
+            let totalBloodOxygen = 0, minBloodOxygen = 100, maxBloodOxygen = 80;
+            let totalWeight = 0, minWeight = 500, maxWeight = 0, weightCount = 0;
+            let latestBloodPressure = 'N/A'; 
 
-          const avgHeartRate = (totalHeartRate / records.length).toFixed(0);
-          const avgBloodOxygen = (totalBloodOxygen / records.length).toFixed(0);
-          const avgWeight = weightCount > 0 ? (totalWeight / weightCount).toFixed(0) : 'N/A';
+            records.forEach((record, index) => {
+                totalHeartRate += record.heartRate;
+                minHeartRate = Math.min(minHeartRate, record.heartRate);
+                maxHeartRate = Math.max(maxHeartRate, record.heartRate);
+                totalBloodOxygen += record.bloodOxygen;
+                minBloodOxygen = Math.min(minBloodOxygen, record.bloodOxygen);
+                maxBloodOxygen = Math.max(maxBloodOxygen, record.bloodOxygen);
 
-          let insightsHtml = `
-            <h3>Your Health Insights (${records.length} records analyzed):</h3>
-            <ul>
-              <li><strong>Heart Rate (bpm):</strong> Avg ${avgHeartRate}, Min ${minHeartRate}, Max ${maxHeartRate}</li>
-              <li><strong>Blood Pressure:</strong> Latest ${latestBloodPressure} mmHg</li>
-              <li><strong>Blood Oxygen (%):</strong> Avg ${avgBloodOxygen}, Min ${minBloodOxygen}, Max ${maxBloodOxygen}</li>
-              <li><strong>Weight (kg):</strong> Avg ${avgWeight}, Min ${minWeight}, Max ${maxWeight}</li>
-            </ul>
-          `;
-          
-          elements.insightsContainer.innerHTML = insightsHtml;
-          renderHealthCharts(records);
+                if (record.weight) { 
+                    totalWeight += record.weight;
+                    minWeight = Math.min(minWeight, record.weight);
+                    maxWeight = Math.max(maxWeight, record.weight);
+                    weightCount++;
+                }
+
+                if (index === 0) { 
+                    latestBloodPressure = record.bloodPressure;
+                }
+            });
+
+            const avgHeartRate = (totalHeartRate / records.length).toFixed(0);
+            const avgBloodOxygen = (totalBloodOxygen / records.length).toFixed(0);
+            const avgWeight = weightCount > 0 ? (totalWeight / weightCount).toFixed(0) : 'N/A';
+
+            let insightsHtml = `
+                <h3>Your Health Insights (${records.length} records analyzed):</h3>
+                <ul>
+                    <li><strong>Heart Rate (bpm):</strong> Avg ${avgHeartRate}, Min ${minHeartRate}, Max ${maxHeartRate}</li>
+                    <li><strong>Blood Pressure:</strong> Latest ${latestBloodPressure} mmHg</li>
+                    <li><strong>Blood Oxygen (%):</strong> Avg ${avgBloodOxygen}, Min ${minBloodOxygen}, Max ${maxBloodOxygen}</li>
+                    <li><strong>Weight (kg):</strong> Avg ${avgWeight}, Min ${minWeight}, Max ${maxWeight}</li>
+                </ul>
+            `;
+            
+            elements.insightsContainer.innerHTML = insightsHtml;
+            renderHealthCharts(records);
         } catch (error) {
-          elements.insightsContainer.innerHTML = '<p>Error loading insights. Please try again.</p>';
-          if (heartRateChartInstance) heartRateChartInstance.destroy(); 
+            elements.insightsContainer.innerHTML = '<p>Error loading insights. Please try again.</p>';
+            if (heartRateChartInstance) heartRateChartInstance.destroy(); 
         }
     }
 

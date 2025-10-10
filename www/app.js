@@ -20,20 +20,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- 2. ADMOB INITIALIZATION FUNCTION ---
 function initializeAdMobLogic() {
-    // This function initializes the AdMob plugin and guarantees the core app starts afterward.
-    AdMob.initialize({
-        testing: true, // IMPORTANT: Keep testing as true until ready for production
-    }).then(() => {
-        console.log("AdMob plugin initialized successfully. Starting core app.");
-        initializeCoreAppLogic(); 
-        preloadAdMobInterstitial(); // Preload the first ad after initialization
-    }).catch(e => {
-        console.error("AdMob initialization failed:", e);
-        // Fallback: If initialization fails, still start the core app.
-        initializeCoreAppLogic();
-    });
+// ...
+        }).then(() => {
+            console.log("AdMob plugin initialized successfully. Starting core app.");
+            // Pass the global Appwrite object
+            initializeCoreAppLogic(Appwrite); 
+            preloadAdMobInterstitial(); 
+// ...
 }
-
 
 // --- 3. CORE APPLICATION LOGIC ---
 // All your existing Appwrite/Chart/UI logic is now inside this function.

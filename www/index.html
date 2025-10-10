@@ -7,112 +7,10 @@
     
         <script async    src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9239900240710331"
         crossorigin="anonymous"></script>
-
-    <style>
-    /* --- YOUR FULL EXISTING CSS CONTENT STARTS HERE --- */
-    :root {
-        --primary: #2e7d32;
-        --secondary: #388e3c;
-        --accent: #7cb342;
-    }
-    body {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        max-width: 1000px;
-        margin: 0 auto;
-        padding: 20px;
-        background-color: #f8f9fa;
-    }
-    .dashboard {
-        display: grid;
-        grid-template-columns: 1fr 1fr; /* Default: Two columns for desktop */
-        gap: 20px;
-    }
-    .card {
-        background: white;
-        border-radius: 10px;
-        padding: 20px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    .card-header {
-        font-size: 1.2rem;
-        font-weight: 600;
-        margin-bottom: 15px;
-        color: var(--primary);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    input, select {
-        width: 100%;
-        padding: 10px;
-        margin: 8px 0;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        box-sizing: border-box;
-    }
-    button {
-        background-color: var(--primary);
-        color: white;
-        border: none;
-        padding: 12px 15px;
-        margin: 10px 0;
-        border-radius: 4px;
-        cursor: pointer;
-        font-weight: 600;
-        transition: background-color 0.3s;
-    }
-    button:hover {
-        background-color: var(--secondary);
-    }
-    .health-metrics {
-        grid-column: span 2;
-    }
-    .chart-container {
-        height: 300px;
-        max-height: 500px;
-        overflow-y: auto;
-        margin-top: 20px;
-        position: relative;
-    }
-    .tips-container {
-        background-color: #e8f5e9;
-        padding: 15px;
-        border-radius: 8px;
-        margin-top: 15px;
-    }
-    #auth-container {
-        max-width: 400px;
-        margin: 20px auto;
-    }
-    #dashboard {
-        display: none;
-    }
-    
-    /* === MOBILE FIX START === */
-    @media (max-width: 768px) {
-        /* Stack the main dashboard cards vertically */
-        .dashboard {
-            grid-template-columns: 1fr;
-        }
-        /* Make the input form fit the single column */
-        .health-metrics {
-            grid-column: 1 / -1; /* Make it span the entire width */
-        }
-        /* Stack the 4 input fields into 2 columns for better mobile viewing */
-        .health-metrics form > div {
-            grid-template-columns: 1fr 1fr !important;
-            gap: 10px;
-        }
-        /* Make the chart responsive */
-        #health-chart {
-            width: 100% !important;
-            height: auto !important;
-        }
-    }
-    /* --- YOUR FULL EXISTING CSS CONTENT ENDS HERE --- */
-    </style>
-
 </head>
+
+<link rel="stylesheet" href="styles.css">
+
 <body>
     <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <h1>Smart Health Dashboard</h1>
@@ -156,19 +54,19 @@
                     <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
                         <div>
                             <label>Heart Rate (bpm)</label>
-                            <input type="number" id="heartRate" min="40" max="200" required>
+                            <input type="number" id="heartRate" min="40" max="200">
                         </div>
                         <div>
                             <label>Blood Pressure (mmHg)</label>
-                            <input type="text" id="bloodPressure" placeholder="120/80" required>
+                            <input type="text" id="bloodPressure" placeholder="120/80">
                         </div>
                         <div>
                             <label>Blood Oxygen (%)</label>
-                            <input type="number" id="bloodOxygen" min="80" max="100" required>
+                            <input type="number" id="bloodOxygen" min="80" max="100">
                         </div>
                         <div>
                             <label>Weight (kg)</label>
-                            <input type="number" id="weight" min="0" required>
+                            <input type="number" id="weight" min="0">
                         </div>
                     </div>
                     <button type="submit">Save Health Data</button>

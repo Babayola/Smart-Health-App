@@ -1,15 +1,16 @@
 // Line 1: Start of the file
-console.log("App.js version: 2025-10-11 - FINAL INTEGRATED FIXES"); 
+console.log("App.js version: 2025-10-11 - FINAL INTEGRATED FIXES (V2)"); 
 
 // --- 1. ADMOB SAFETY WRAPPER ---
 document.addEventListener('DOMContentLoaded', () => {
     
-    // Check if AdMob plugin is available (only true on a running device/emulator)
-    if (typeof AdMob !== 'undefined') {
+    // FIX 1 (Web App Login Fix): Use window.AdMob to robustly check for the Capacitor plugin's presence.
+    // This prevents the web browser from crashing on mobile-only AdMob code.
+    if (window.AdMob) {
         initializeAdMobLogic();
     } else {
         console.warn("AdMob plugin not detected. Running core app logic only.");
-        // FIX 1: Pass the global Appwrite object (available from index.html)
+        // Pass the global Appwrite object (available from index.html)
         initializeCoreAppLogic(Appwrite); 
     }
 });
@@ -21,7 +22,7 @@ function initializeAdMobLogic() {
         testing: true,
     }).then(() => {
         console.log("AdMob plugin initialized successfully. Starting core app.");
-        // FIX 1: Pass the global Appwrite object
+        // Pass the global Appwrite object
         initializeCoreAppLogic(Appwrite); 
         preloadAdMobInterstitial();
     }).catch(e => {
@@ -33,7 +34,7 @@ function initializeAdMobLogic() {
 
 
 // --- 3. CORE APPLICATION LOGIC ---
-// FIX 2: Function must accept the Appwrite object to use its methods (ID, Permission, Role)
+// Function must accept the Appwrite object to use its methods (ID, Permission, Role)
 function initializeCoreAppLogic(Appwrite) {
     // --- CONFIGURATION CONSTANTS ---
     const DATABASE_ID = '687a0e5a0031f474d1c7';
@@ -51,7 +52,7 @@ function initializeCoreAppLogic(Appwrite) {
     const account = new Appwrite.Account(client);
     const databases = new Appwrite.Databases(client);
     
-    // 2. DOM ELEMENTS (UNMODIFIED)
+    // 2. DOM ELEMENTS 
     const elements = {
         authContainer: document.getElementById('auth-container'),
         dashboard: document.getElementById('dashboard'),
@@ -78,9 +79,9 @@ function initializeCoreAppLogic(Appwrite) {
     };
 
 
-    // 3. ADMOB PRELOAD FUNCTION (UNMODIFIED)
+    // 3. ADMOB PRELOAD FUNCTION
     async function preloadAdMobInterstitial() {
-        if (typeof AdMob === 'undefined') return;
+        if (!window.AdMob) return;
         try {
             await AdMob.prepareInterstitial({
                 adId: INTERSTITIAL_AD_UNIT_ID,
@@ -93,7 +94,7 @@ function initializeCoreAppLogic(Appwrite) {
     }
 
 
-    // 4. AUTHENTICATION FUNCTIONS (UNCHANGED, but now uses scoped Appwrite via parameter)
+    // 4. AUTHENTICATION FUNCTIONS
     async function checkAuth() {
         try {
             const user = await account.get();
@@ -131,7 +132,7 @@ function initializeCoreAppLogic(Appwrite) {
             handleGetTips(); 
             alert("Login successful!");
             
-            if (typeof AdMob !== 'undefined') {
+            if (window.AdMob) {
                 await AdMob.showInterstitial();
                 preloadAdMobInterstitial(); 
             }
@@ -144,7 +145,7 @@ function initializeCoreAppLogic(Appwrite) {
     async function handleSignup(e) {
         e.preventDefault();
         try {
-            // FIX 3: Uses Appwrite.ID from the function scope
+            // Uses Appwrite.ID from the function scope
             await account.create(Appwrite.ID.unique(), elements.signupEmail.value, elements.signupPassword.value, elements.signupName.value);
             await account.createEmailPasswordSession(elements.signupEmail.value, elements.signupPassword.value);
             const currentUser = await account.get();
@@ -153,7 +154,7 @@ function initializeCoreAppLogic(Appwrite) {
             handleGetTips(); 
             alert("Account created and logged in!");
 
-            if (typeof AdMob !== 'undefined') {
+            if (window.AdMob) {
                 const isAdReady = await AdMob.isInterstitialReady();
                 if (isAdReady.ready) {
                     await AdMob.showInterstitial();
@@ -181,7 +182,7 @@ function initializeCoreAppLogic(Appwrite) {
             if (elements.tipsContainer) elements.tipsContainer.innerHTML = '<p>Login to get personalized health tips</p>';
             if (heartRateChartInstance) heartRateChartInstance.destroy();
 
-            if (typeof AdMob !== 'undefined') {
+            if (window.AdMob) {
                 await AdMob.showInterstitial();
                 preloadAdMobInterstitial(); 
             }
@@ -215,7 +216,11 @@ function initializeCoreAppLogic(Appwrite) {
             return;
         }
 
-        const data = {};
+        // Prepare data object with correct data types
+        const data = {
+            // FIX 2 (Mobile Insights Fix): Add the user ID to the document data for querying
+            userId: user.$id 
+        };
         if (heartRate) data.heartRate = parseInt(heartRate);
         if (bloodPressure) data.bloodPressure = bloodPressure;
         if (bloodOxygen) data.bloodOxygen = parseInt(bloodOxygen);
@@ -226,21 +231,22 @@ function initializeCoreAppLogic(Appwrite) {
             await databases.createDocument(
                 DATABASE_ID,  
                 COLLECTION_ID,  
-                // FIX 3: Uses Appwrite.ID from the function scope
+                // Uses Appwrite.ID from the function scope
                 Appwrite.ID.unique(),    
                 data,
                 [ 
-                    // FIX 3: Uses Appwrite.Permission and Appwrite.Role from the function scope
+                    // Uses Appwrite.Permission and Appwrite.Role from the function scope
                     Appwrite.Permission.read(Appwrite.Role.user(user.$id)),
                     Appwrite.Permission.write(Appwrite.Role.user(user.$id))
                 ]
             );
             alert('Health data saved successfully!');
             elements.healthForm.reset();
+            // This now successfully loads data using the new 'userId' attribute
             handleAnalyzeData(); 
             handleGetTips(); 
 
-            if (typeof AdMob !== 'undefined') {
+            if (window.AdMob) {
                 await AdMob.showInterstitial();
                 preloadAdMobInterstitial(); 
             }
@@ -325,6 +331,7 @@ function initializeCoreAppLogic(Appwrite) {
                 DATABASE_ID,
                 COLLECTION_ID,
                 [
+                    // This query now relies on the 'userId' attribute saved in the document
                     Appwrite.Query.equal('userId', user.$id), 
                     Appwrite.Query.orderDesc('timestamp'),    
                     Appwrite.Query.limit(10)                    
@@ -406,17 +413,20 @@ function initializeCoreAppLogic(Appwrite) {
             const records = response.documents;
 
             if (records.length > 0) {
+                const latestBP = records[0].bloodPressure;
+                const [systolic, diastolic] = latestBP ? latestBP.split('/').map(Number) : [null, null];
+
+                // ... (rest of the tips logic is sound)
                 const latestHR = records[0].heartRate;
                 const latestBO = records[0].bloodOxygen;
-                const latestBP = records[0].bloodPressure;
                 const latestWeight = records[0].weight;
-                const [systolic, diastolic] = latestBP.split('/').map(Number);
+
 
                 if (latestHR > 90) personalizedTips.push("Your recent heart rate is a bit high. Consider stress reduction techniques like deep breathing or meditation.");
                 else if (latestHR < 60 && latestHR > 0) personalizedTips.push("Your heart rate seems low. If you're not an athlete, consult a doctor if you feel symptoms like dizziness.");
                 if (latestBO < 95) personalizedTips.push("Your recent blood oxygen is on the lower side. Try some deep breathing exercises throughout the day.");
-                if (systolic >= 130 || diastolic >= 80) personalizedTips.push("Your recent blood pressure readings suggest you might be approaching or in the high range. Focus on a low-sodium diet and regular exercise.");
-                else if (systolic < 90 || diastolic < 60) personalizedTips.push("Your blood pressure appears low. Ensure you're well-hydrated and discuss with a doctor if you experience dizziness.");
+                if (systolic && diastolic && (systolic >= 130 || diastolic >= 80)) personalizedTips.push("Your recent blood pressure readings suggest you might be approaching or in the high range. Focus on a low-sodium diet and regular exercise.");
+                else if (systolic && diastolic && (systolic < 90 || diastolic < 60)) personalizedTips.push("Your blood pressure appears low. Ensure you're well-hydrated and discuss with a doctor if you experience dizziness.");
                 if (latestWeight > 90) personalizedTips.push("Your recent weight reading is high. Focusing on a balanced diet and increasing physical activity can help.");
             }
         } catch (error) {

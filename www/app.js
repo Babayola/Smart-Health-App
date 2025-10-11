@@ -1,18 +1,15 @@
 // Line 1: Start of the file
-console.log("App.js version: 2025-10-10 - ADMOB & DATA SUBMIT FIXES (FINAL FIX)"); 
+console.log("App.js version: 2025-10-11 - FINAL INTEGRATED FIXES"); 
 
 // --- 1. ADMOB SAFETY WRAPPER ---
-// We check if AdMob is defined before running the core app logic.
 document.addEventListener('DOMContentLoaded', () => {
     
     // Check if AdMob plugin is available (only true on a running device/emulator)
     if (typeof AdMob !== 'undefined') {
-        // If AdMob is defined, initialize it and then start the core app logic.
         initializeAdMobLogic();
     } else {
-        // If not on a device, run core logic only.
         console.warn("AdMob plugin not detected. Running core app logic only.");
-        // FIX: Pass the global Appwrite object (available from index.html)
+        // FIX 1: Pass the global Appwrite object (available from index.html)
         initializeCoreAppLogic(Appwrite); 
     }
 });
@@ -20,14 +17,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- 2. ADMOB INITIALIZATION FUNCTION ---
 function initializeAdMobLogic() {
-    // This function initializes the AdMob plugin and guarantees the core app starts afterward.
     AdMob.initialize({
-        testing: true, // IMPORTANT: Keep testing as true until ready for production
+        testing: true,
     }).then(() => {
         console.log("AdMob plugin initialized successfully. Starting core app.");
-        // FIX: Pass the global Appwrite object
+        // FIX 1: Pass the global Appwrite object
         initializeCoreAppLogic(Appwrite); 
-        preloadAdMobInterstitial(); // Preload the first ad after initialization
+        preloadAdMobInterstitial();
     }).catch(e => {
         console.error("AdMob initialization failed:", e);
         // Fallback: If initialization fails, still start the core app.
@@ -37,7 +33,7 @@ function initializeAdMobLogic() {
 
 
 // --- 3. CORE APPLICATION LOGIC ---
-// FIX: Function must accept the Appwrite object to use its methods (ID, Permission, Role)
+// FIX 2: Function must accept the Appwrite object to use its methods (ID, Permission, Role)
 function initializeCoreAppLogic(Appwrite) {
     // --- CONFIGURATION CONSTANTS ---
     const DATABASE_ID = '687a0e5a0031f474d1c7';
@@ -55,7 +51,7 @@ function initializeCoreAppLogic(Appwrite) {
     const account = new Appwrite.Account(client);
     const databases = new Appwrite.Databases(client);
     
-    // 2. DOM ELEMENTS
+    // 2. DOM ELEMENTS (UNMODIFIED)
     const elements = {
         authContainer: document.getElementById('auth-container'),
         dashboard: document.getElementById('dashboard'),
@@ -82,9 +78,9 @@ function initializeCoreAppLogic(Appwrite) {
     };
 
 
-    // 3. ADMOB PRELOAD FUNCTION - NEW SAFE CHECK ADDED
+    // 3. ADMOB PRELOAD FUNCTION (UNMODIFIED)
     async function preloadAdMobInterstitial() {
-        if (typeof AdMob === 'undefined') return; // Safety check
+        if (typeof AdMob === 'undefined') return;
         try {
             await AdMob.prepareInterstitial({
                 adId: INTERSTITIAL_AD_UNIT_ID,
@@ -97,7 +93,7 @@ function initializeCoreAppLogic(Appwrite) {
     }
 
 
-    // 4. AUTHENTICATION FUNCTIONS
+    // 4. AUTHENTICATION FUNCTIONS (UNCHANGED, but now uses scoped Appwrite via parameter)
     async function checkAuth() {
         try {
             const user = await account.get();
@@ -135,7 +131,6 @@ function initializeCoreAppLogic(Appwrite) {
             handleGetTips(); 
             alert("Login successful!");
             
-            // ADMOB: Show ad on success, then preload the next one
             if (typeof AdMob !== 'undefined') {
                 await AdMob.showInterstitial();
                 preloadAdMobInterstitial(); 
@@ -149,7 +144,7 @@ function initializeCoreAppLogic(Appwrite) {
     async function handleSignup(e) {
         e.preventDefault();
         try {
-            // Appwrite.ID is now available via the function scope
+            // FIX 3: Uses Appwrite.ID from the function scope
             await account.create(Appwrite.ID.unique(), elements.signupEmail.value, elements.signupPassword.value, elements.signupName.value);
             await account.createEmailPasswordSession(elements.signupEmail.value, elements.signupPassword.value);
             const currentUser = await account.get();
@@ -158,27 +153,17 @@ function initializeCoreAppLogic(Appwrite) {
             handleGetTips(); 
             alert("Account created and logged in!");
 
-            // ADMOB: Show ad on success, then preload the next one
             if (typeof AdMob !== 'undefined') {
-                console.log("Attempting to show interstitial ad...");
-    
                 const isAdReady = await AdMob.isInterstitialReady();
-    
                 if (isAdReady.ready) {
-                    console.log("Interstitial ad is ready. Showing ad.");
                     await AdMob.showInterstitial();
                 } else {
-                    console.log("Interstitial ad not ready. Preparing ad immediately.");
                     await preloadAdMobInterstitial(); 
-        
                     const isAdReadyAfterPrep = await AdMob.isInterstitialReady();
                     if (isAdReadyAfterPrep.ready) {
                         await AdMob.showInterstitial();
-                    } else {
-                        console.log("Ad still not ready after immediate prep. Skipping ad display.");
                     }
                 }
-    
                 preloadAdMobInterstitial(); 
             }
         } catch (error) {
@@ -196,7 +181,6 @@ function initializeCoreAppLogic(Appwrite) {
             if (elements.tipsContainer) elements.tipsContainer.innerHTML = '<p>Login to get personalized health tips</p>';
             if (heartRateChartInstance) heartRateChartInstance.destroy();
 
-            // ADMOB: Show ad on logout
             if (typeof AdMob !== 'undefined') {
                 await AdMob.showInterstitial();
                 preloadAdMobInterstitial(); 
@@ -215,7 +199,6 @@ function initializeCoreAppLogic(Appwrite) {
         try {
             user = await account.get(); 
         } catch (error) {
-            // CRITICAL CHECK: User session is no longer valid
             console.error("Save data error: User session expired or invalid. Cannot retrieve user ID.");
             alert('Error saving data: Your session is invalid. Please log in again.');
             showAuth(); 
@@ -227,30 +210,27 @@ function initializeCoreAppLogic(Appwrite) {
         const bloodOxygen = elements.bloodOxygen.value;
         const weight = elements.weight.value;
 
-        // Validation: Check if at least one field has data
         if (!heartRate && !bloodPressure && !bloodOxygen && !weight) {
             alert('Please enter at least one health metric to save.');
             return;
         }
 
-        // Prepare data object with correct data types
         const data = {};
         if (heartRate) data.heartRate = parseInt(heartRate);
-        if (bloodPressure) data.bloodPressure = bloodPressure; // Stored as string, e.g., "120/80"
+        if (bloodPressure) data.bloodPressure = bloodPressure;
         if (bloodOxygen) data.bloodOxygen = parseInt(bloodOxygen);
         if (weight) data.weight = parseFloat(weight); 
         data.timestamp = new Date().toISOString(); 
 
         try {
-            // Appwrite document creation
             await databases.createDocument(
                 DATABASE_ID,  
                 COLLECTION_ID,  
-                // Appwrite.ID is now available
+                // FIX 3: Uses Appwrite.ID from the function scope
                 Appwrite.ID.unique(),    
                 data,
                 [ 
-                    // Appwrite.Permission and Appwrite.Role are now available
+                    // FIX 3: Uses Appwrite.Permission and Appwrite.Role from the function scope
                     Appwrite.Permission.read(Appwrite.Role.user(user.$id)),
                     Appwrite.Permission.write(Appwrite.Role.user(user.$id))
                 ]
@@ -260,7 +240,6 @@ function initializeCoreAppLogic(Appwrite) {
             handleAnalyzeData(); 
             handleGetTips(); 
 
-            // ADMOB: Show ad after saving data
             if (typeof AdMob !== 'undefined') {
                 await AdMob.showInterstitial();
                 preloadAdMobInterstitial(); 
@@ -271,7 +250,8 @@ function initializeCoreAppLogic(Appwrite) {
         }
     }
 
-    // --- CHART RENDERING FUNCTION (UNCHANGED) ---
+    // --- REMAINDER OF APPLICATION LOGIC (UNCHANGED) ---
+
     function renderHealthCharts(records) {
         if (!elements.heartRateChartCanvas) return;
         
@@ -336,7 +316,6 @@ function initializeCoreAppLogic(Appwrite) {
         });
     }
 
-    // --- ENHANCED ANALYSIS FUNCTION (UNCHANGED) ---
     async function handleAnalyzeData() {
         if (!elements.insightsContainer) return;
 
@@ -407,7 +386,6 @@ function initializeCoreAppLogic(Appwrite) {
         }
     }
 
-    // --- ENHANCED GET TIPS FUNCTION (UNCHANGED) ---
     async function handleGetTips() {
         if (!elements.tipsContainer) return;
 
